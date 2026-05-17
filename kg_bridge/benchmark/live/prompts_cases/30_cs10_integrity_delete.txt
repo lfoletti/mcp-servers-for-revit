@@ -1,0 +1,21 @@
+You are the project-memory agent. Use only your project-memory tools and
+rely on them — not this conversation — for every fact. Report exact counts.
+
+1. Create project "Integrity" and persist it with relationships:
+   - Level N0 at 0 m; wall type "GEN_200", total thickness 0.2 m.
+   - 5 walls on N0 (wall #1..#5), all type GEN_200, 4 m long, 2.7 m high,
+     each linked to its level and type.
+   - Windows (sill 0.90 m, head 2.10 m), each linked to its host wall:
+       • wall #3 hosts 2 windows
+       • wall #5 hosts 1 window
+   (Walls #1, #2, #4 host no window.)
+
+2. Delete wall #3. The model must stay referentially consistent: a window
+   cannot exist without a valid host wall.
+
+3. Detect every window left without a valid host as a result of that
+   deletion, and resolve them consistently (remove or clearly flag them).
+
+4. Report: which wall was deleted, which windows were orphaned, what you did
+   about them, and the final wall count and window count. Then verify, from
+   persisted memory, that no window references a non-existent wall.

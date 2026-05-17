@@ -238,12 +238,18 @@ def main() -> int:
              "| cost $ | err |",
              "|---|---|--:|--:|--:|--:|--:|:--:|"]
     order = [p for p in ("flat", "kg", "kg-many") if p in profiles]
+    # Display the real KG_BENCH_MODE (e.g. "kg-many") rather than the slot
+    # key, so a flat-vs-kg-many run reads correctly even though it occupies
+    # the generic --kg-dir slot.
+    def disp(label: str) -> str:
+        return profiles.get(label, {}).get("mode", label)
+
     for scen in sorted(results):
         for label in order:
             m = results[scen].get(label, {})
             lines.append("| {} | {} | {} | {} | {} | {} | {} | {} |".format(
-                scen, label, m.get("input_tokens"), m.get("output_tokens"),
-                m.get("num_turns"), m.get("wall_s"),
+                scen, disp(label), m.get("input_tokens"),
+                m.get("output_tokens"), m.get("num_turns"), m.get("wall_s"),
                 m.get("total_cost_usd"), m.get("is_error")))
         for a, b in RATIO_PAIRS:
             if a not in profiles or b not in profiles:
@@ -251,7 +257,7 @@ def main() -> int:
             ma, mb = results[scen].get(a, {}), results[scen].get(b, {})
             lines.append(
                 "| **{}** | **{}/{}** | **{}** | {} | **{}** | {} | {} | |"
-                .format(scen, a, b,
+                .format(scen, disp(a), disp(b),
                         ratio(ma.get("input_tokens"), mb.get("input_tokens")),
                         ratio(ma.get("output_tokens"), mb.get("output_tokens")),
                         ratio(ma.get("num_turns"), mb.get("num_turns")),

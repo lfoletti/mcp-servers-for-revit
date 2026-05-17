@@ -1,0 +1,10 @@
+Continue project "Resume". You have no memory of any prior conversation —
+work strictly from persisted project memory via your project-memory tools.
+
+The remaining work: every wall on level N1 must host exactly one window
+(sill 0.90 m, head 2.10 m, linked to its host wall). Walls already having a
+window must NOT get a second one.
+
+From persisted memory: determine which N1 walls still lack a window, add
+only the missing windows, and report how many you added, plus the final
+per-level window count and the final total window count.
