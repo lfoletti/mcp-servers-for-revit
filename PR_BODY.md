@@ -45,7 +45,8 @@ answer, instead of believing the model's prose.
 | Correct (verified vs state) | 6 / 15 | **15 / 15** |
 | Fabricated (confident but false) | **8 / 15** | 0 / 15 |
 | Honest "can't do it" | 1 / 15 | 0 / 15 |
-| Total spend | $10.28 | $8.17 |
+| Total tokens (input incl. cache + output) | ~7.0 M | ~5.8 M |
+| — of which output (the uncached cost driver) | ~140 k | ~105 k |
 | **$ per _correct_ task** | $1.71 | **$0.54** |
 
 Two controlled micro-benchmarks (same correct end state — cost is the only
