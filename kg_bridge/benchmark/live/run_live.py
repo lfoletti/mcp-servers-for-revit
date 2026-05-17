@@ -90,6 +90,31 @@ def reset_state(profile: dict) -> list[str]:
     return cleared
 
 
+def snapshot_state(profile: dict, out_dir: Path, scen: str,
+                   label: str) -> str:
+    """Copy the persisted state right AFTER a scenario so verify.py can score
+    each scenario from its own checkpoint (needed because the prompts/ set
+    accumulates within one shared project). Best-effort."""
+    dest = out_dir / "snapshots" / "{}__{}".format(scen, label)
+    dest.mkdir(parents=True, exist_ok=True)
+    kgh = profile.get("kg_home")
+    if kgh and Path(kgh).is_dir():
+        kdst = dest / "kg"
+        kdst.mkdir(exist_ok=True)
+        for f in Path(kgh).glob("*.kg.json"):
+            try:
+                shutil.copy2(f, kdst / f.name)
+            except OSError:
+                pass
+    db = profile.get("sqlite_db")
+    if db and Path(db).exists():
+        try:
+            shutil.copy2(db, dest / "flat.db")
+        except OSError:
+            pass
+    return str(dest.relative_to(out_dir))
+
+
 def parse_claude_json(stdout: str) -> dict:
     """Defensive: --output-format json yields one result object; tolerate a
     list or NDJSON just in case."""
@@ -168,6 +193,9 @@ def main() -> int:
     ap.add_argument("--claude", default="claude")
     ap.add_argument("--max-turns", type=int, default=40)
     ap.add_argument("--timeout", type=int, default=600)
+    ap.add_argument("--snapshot", action="store_true",
+                    help="copy persisted state after each scenario into "
+                         "<out>/snapshots/ for per-scenario verification")
     ap.add_argument("--no-reset", action="store_true",
                     help="do not wipe KG_HOME / revit-data.db before each profile")
     ap.add_argument("--yes", action="store_true",
@@ -213,6 +241,8 @@ def main() -> int:
             print("[{}] {} ...".format(label, scen), flush=True)
             m = run_one(args.claude, prof["dir"], prompt,
                         args.max_turns, args.timeout)
+            if args.snapshot:
+                m["_snapshot"] = snapshot_state(prof, out_dir, scen, label)
             results.setdefault(scen, {})[label] = m
             print("    in={} out={} turns={} wall={}s err={}".format(
                 m.get("input_tokens"), m.get("output_tokens"),
