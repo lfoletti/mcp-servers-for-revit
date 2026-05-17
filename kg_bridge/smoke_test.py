@@ -126,16 +126,28 @@ def main() -> int:
                 "position": [float(i), 0.0], "sill_height": 0.9,
                 "head_height": 2.1}} for i in range(8)
         ])
-        check(added["count"] == 8
+        check(added["count"] == 8 and "llm_ids" not in added
+              and len(added["sample_ids"]) == 8
               and b.call("stats")["turn"] == before_turn + 1,
-              "add_many: 8 windows created in ONE call / ONE turn")
+              "add_many: 8 windows in ONE call/turn, compact return (no echo)")
+        ids = added["sample_ids"]
         modded = b.call("modify_many", items=[
-            {"llm_id": wid, "updates": {"sill_height": 0.8}}
-            for wid in added["llm_ids"]
+            {"llm_id": wid, "updates": {"sill_height": 0.8}} for wid in ids
         ])
-        win0 = b.call("query", llm_id=added["llm_ids"][0])["nodes"][0]
+        win0 = b.call("query", llm_id=ids[0])["nodes"][0]
         check(modded["count"] == 8 and win0["attrs"]["sill_height"] == 0.8,
               "modify_many: 'set sill of all windows to 0.8' in ONE call")
+
+        section("modify_where (select+mutate, 1 round-trip) + compact query")
+        mw = b.call("modify_where", node_type="Window",
+                    where=[{"attr": "sill_height", "op": "lt", "value": 0.85}],
+                    updates={"sill_height": 0.7})
+        cq = b.call("query", node_type="Window", compact=True)
+        check(mw["matched"] == 8 and mw["modified"] == 8
+              and "nodes" not in cq and cq["count"] == 8
+              and cq["by_type"].get("Window") == 8,
+              "modify_where matched+mutated 8 in 1 call; compact query "
+              "returns counts/ids only (no per-node dump)")
         n_before = b.call("stats")["nodes_total"]
         bad = None
         try:

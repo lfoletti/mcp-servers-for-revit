@@ -184,6 +184,44 @@ def _add_one(kg: Any, spec: Dict[str, Any]) -> str:
     return new_id
 
 
+# --- compact-return helpers ---------------------------------------------
+# Token economy: tools must not hand back long id/node lists the model then
+# re-narrates. Mutating tools return a count + a small id sample; readers
+# offer a `compact` mode. (See BENCHMARK.md — output dominates the bill.)
+_ID_CAP = 10
+
+
+def _ids_compact(ids: list) -> Dict[str, Any]:
+    return {"count": len(ids), "sample_ids": ids[:_ID_CAP],
+            "truncated": len(ids) > _ID_CAP}
+
+
+def _cmp(a: Any, op: str, b: Any) -> bool:
+    if op in ("eq", "=="):
+        return a == b
+    if op in ("ne", "!="):
+        return a != b
+    if op == "in":
+        try:
+            return a in b
+        except TypeError:
+            return False
+    try:
+        a, b = float(a), float(b)
+    except (TypeError, ValueError):
+        return False
+    return {"lt": a < b, "<": a < b, "le": a <= b, "<=": a <= b,
+            "gt": a > b, ">": a > b, "ge": a >= b, ">=": a >= b}.get(op, False)
+
+
+def _matches(node: Dict[str, Any], where: list) -> bool:
+    for pred in where:
+        if not _cmp(node.get(pred["attr"]), pred.get("op", "eq"),
+                    pred.get("value")):
+            return False
+    return True
+
+
 def m_add_many(p: Dict[str, Any]) -> Dict[str, Any]:
     """Atomic bulk create. One transaction, one turn, N items: if any item
     fails the WHOLE batch rolls back (no partial project state). Mirrors the
@@ -196,7 +234,7 @@ def m_add_many(p: Dict[str, Any]) -> Dict[str, Any]:
         kg.advance_turn()
         for spec in items:
             new_ids.append(_add_one(kg, spec))
-    return {"count": len(new_ids), "llm_ids": new_ids, "turn": kg.turn}
+    return {**_ids_compact(new_ids), "turn": kg.turn}
 
 
 def m_modify_many(p: Dict[str, Any]) -> Dict[str, Any]:
@@ -210,7 +248,30 @@ def m_modify_many(p: Dict[str, Any]) -> Dict[str, Any]:
         for it in items:
             kg.modify_node(it["llm_id"], it["updates"])
             ids.append(it["llm_id"])
-    return {"count": len(ids), "llm_ids": ids, "turn": kg.turn}
+    return {**_ids_compact(ids), "turn": kg.turn}
+
+
+def m_modify_where(p: Dict[str, Any]) -> Dict[str, Any]:
+    """Select-and-mutate in ONE call: filter live nodes of a type by
+    attribute predicates, apply `updates` to all matches in a single atomic
+    transaction. Replaces the query → filter-in-context → loop-N-modifies
+    pattern with one round-trip and a compact return (no per-node echo).
+    `where` is an AND list of {attr, op, value}; op ∈ eq/ne/lt/le/gt/ge/in
+    (empty `where` ⇒ all live nodes of the type)."""
+    kg = _kg(p.get("project_id", "default"))
+    node_type = p["node_type"]
+    where = p.get("where") or []
+    updates = p["updates"]
+    matched = [nid for nid in kg.find_by_type(node_type)
+               if _matches(kg.get_node(nid), where)]
+    with kg.transaction():
+        kg.advance_turn()
+        for nid in matched:
+            kg.modify_node(nid, updates)
+    return {"node_type": node_type, "matched": len(matched),
+            "modified": len(matched), "turn": kg.turn,
+            "sample_ids": matched[:_ID_CAP],
+            "truncated": len(matched) > _ID_CAP}
 
 
 def m_soft_delete(p: Dict[str, Any]) -> Dict[str, Any]:
@@ -234,6 +295,7 @@ def m_query(p: Dict[str, Any]) -> Dict[str, Any]:
     llm_id = p.get("llm_id")
     include_deleted = bool(p.get("include_deleted", False))
     include_edges = bool(p.get("include_edges", True))
+    compact = bool(p.get("compact", False))
 
     d = kg.to_dict()
     nodes = []
@@ -245,6 +307,18 @@ def m_query(p: Dict[str, Any]) -> Dict[str, Any]:
         if not include_deleted and n.get(DELETED_AT) is not None:
             continue
         nodes.append(_node_view(n["id"], n))
+
+    if compact:
+        # Token economy: ids + per-type counts, no per-node attr dump.
+        by_type: Dict[str, int] = {}
+        for nv in nodes:
+            by_type[nv["type"]] = by_type.get(nv["type"], 0) + 1
+        return {"count": len(nodes), "by_type": by_type,
+                "ids": [nv["llm_id"] for nv in nodes],
+                "edges_count": sum(
+                    1 for e in d["edges"]
+                    if e["src"] in {nv["llm_id"] for nv in nodes}
+                    or e["dst"] in {nv["llm_id"] for nv in nodes})}
 
     result: Dict[str, Any] = {"count": len(nodes), "nodes": nodes}
     if include_edges:
@@ -333,6 +407,7 @@ _DISPATCH = {
     "add_many": m_add_many,
     "modify_element": m_modify_element,
     "modify_many": m_modify_many,
+    "modify_where": m_modify_where,
     "soft_delete": m_soft_delete,
     "query": m_query,
     "diff_since": m_diff_since,
