@@ -221,6 +221,52 @@ the flat side), run the same prompts with a model open in Revit and the
 plugin connected; this matches the modelled scenarios more closely but needs
 the full stack.
 
+## Live scored results — flat vs kg-many (verified, 2026-05-18)
+
+One full run, 15 case studies × 2 profiles (`KG_BENCH_MODE` `flat` vs
+`kg-many`), via `run_live.py --snapshot`, then `verify.py`: each scenario
+scored against **deterministic ground truth read from the persisted state**
+(`verify.py` checkers), plus a claim↔state verdict
+{correct | honest_incomplete | fabricated | indeterminate}.
+
+**The headline is trust, not speed.**
+
+| Profile | correct | honest_incomplete | **fabricated** | total $ | $ / correct task* |
+|---|--:|--:|--:|--:|--:|
+| flat | 6 / 15 | 1 | **8** | 10.28 | **1.71** |
+| **kg-many** | **15 / 15** | 0 | **0** | 8.17 | **0.54** |
+
+\* effective cost = total spend ÷ correct tasks (wasted spend on wrong
+answers counted — the decision-relevant figure).
+
+- On **8 of 15** BIM scenarios the flat `store_*_data` baseline returned a
+  fluent "done / persisted" while the persisted state proves nothing was
+  stored (it cannot represent walls/windows/relations) → **fabricated**.
+  The metric discriminates honesty: at `00_seed` flat *admitted* it only
+  stored metadata (`honest_incomplete`); the moment a BIM mutation is asked
+  it *claims* to have done it (`fabricated`).
+- **kg-many: 15/15 correct**, `state_accuracy = 1.0` on every state-graded
+  scenario (deterministic check on the persisted KG).
+- The "wow" compliance case: flat **fabricated** a $1.36 compliance dossier;
+  kg-many produced a **verified** one at $1.77 — cost is secondary when the
+  cheaper answer is a confident lie.
+- Where flat **can** do the task — the room scenarios (`bulkN`, in-domain
+  for `store_*_data`) — it is scored **correct ×4**, and kg-many is still
+  ~25–40 % cheaper. The comparison is not rigged: flat wins "correct" wherever
+  it is actually capable.
+
+**Honest caveats.** (1) `fabricated` is contingent on asking BIM tasks
+out of `store_*_data`'s domain — the defensible claim is *"for BIM project
+memory, the flat layer does not merely limit, it fabricates; kg-many is
+verifiably correct"*, not "flat is always bad". (2) S3/S5 are read-only →
+claim-graded (weak basis), a wash for both. (3) Single run → API variance on
+the **dollar** figures; the **verdicts** are robust (a binary capability
+gulf, not noise). (4) `kg-many` is the shipped baseline (single + `_many`
+tools); the no-bulk profile is retired from the benchmark.
+
+Reproduce: see [Run it yourself](#run-it-yourself-in-a-real-client-ab-by-server-profile)
+then `kg_bridge/benchmark/live/verify.py --out <run dirs…>`.
+
 ## Reproduce
 
 ```bash
