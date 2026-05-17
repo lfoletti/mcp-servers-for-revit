@@ -296,9 +296,29 @@ python kg_bridge/benchmark/live/verify.py --out kg_bridge/benchmark/live/out_mod
 ```
 
 `verify.py` confirms both strategies reach the same correct state (1 lvl /
-30 wall / 30 win, all sill ≥ 0.9); the `loop` vs `where` cost/turns/output
-delta is the measured economy. (`--flat-dir` is now optional for such
-KG-only ablations.) Numbers to be filled from the run.
+30 wall / 30 win, all sill ≥ 0.9); the `loop` vs `where` delta is the
+measured economy. (`--flat-dir` is now optional for such KG-only
+ablations.)
+
+**Measured (N=30, one run, both `verdict=correct`, `state_accuracy=1.0`):**
+
+| metric | `10_loop` (query + 30× modify) | `20_where` (1× `kg_modify_where`) | loop / where |
+|---|--:|--:|--:|
+| turns | 45 | **15** | **×3.0** |
+| output tokens | 19 458 | 15 954 | ×1.22 |
+| input (incl. cache) | ~571 700 | ~466 200 | ×1.23 |
+| **cost $** | **1.252** | **0.871** | **×1.44 (−31 %)** |
+| wall s | 205.7 | 164.4 | ×1.25 |
+
+The seed is one bulk call in both (≈equal); the gap is entirely the edit
+step — `loop` issued 30 separate `kg_modify_element` calls (turns 2–31),
+`where` did it in one call at turn 2. The structural lever (round-trips
+×3, O(N)→O(1)) is robust; the cost delta (−31 %) is smaller than the turn
+ratio because prompt caching amortises the extra input — consistent with
+the controlling fact above (output + round-trips drive the bill). At
+larger N the gap widens (loop O(N) in turns/output; where O(1)).
+`kg_modify_where` is strictly dominant here: same correct state, cheaper,
+3× fewer round-trips, faster.
 
 ## Reproduce
 
