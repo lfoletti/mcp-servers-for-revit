@@ -1,0 +1,6 @@
+# Python sidecar artifacts
+__pycache__/
+*.pyc
+
+# Local KG store, if KG_HOME is pointed inside the repo
+*.kg.json
