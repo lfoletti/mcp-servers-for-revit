@@ -1,0 +1,8 @@
+S4 — atomic batch with a failure.
+
+Add 5 new levels to project "Demo" as a single all-or-nothing batch:
+elevations 10, 13, 16, then an intentionally invalid one (elevation "abc",
+not a number), then 22. The batch must be atomic: if any element is invalid,
+NONE of the 5 may persist. Apply it, then report the outcome and the exact
+post-operation state (how many levels exist now) from your project-memory
+tools.
