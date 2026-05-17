@@ -1,0 +1,18 @@
+You are the project-memory agent. Use only your project-memory tools and
+rely on them — not this conversation. Report exact counts.
+
+1. Create project "MWWhere" and persist it with relationships (you MAY use a
+   single bulk creation call for the seed): level N0 at 0 m; wall type
+   "GEN_200" 0.2 m; 30 walls on N0 (GEN_200, 4 m, 2.7 m, linked to level +
+   type); 30 windows, each hosted on one distinct wall, sill 0.60 m,
+   head 2.10 m.
+
+2. Code rule: every window's sill must be ≥ 0.90 m. Bring every
+   non-compliant window to exactly 0.90 m.
+
+   You MUST do step 2 as a SINGLE select-and-mutate call (one
+   `kg_modify_where` over the windows with the sill predicate). Do not
+   loop, do not issue per-element modify calls.
+
+3. Confirm from memory: how many windows were updated and that all 30 are
+   now at sill 0.90 m.

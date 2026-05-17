@@ -267,6 +267,39 @@ tools); the no-bulk profile is retired from the benchmark.
 Reproduce: see [Run it yourself](#run-it-yourself-in-a-real-client-ab-by-server-profile)
 then `kg_bridge/benchmark/live/verify.py --out <run dirs…>`.
 
+## Token-economy measures (delivered)
+
+The scored run established the controlling fact: with prompt caching the
+**input is cache-cheap; the bill is dominated by model output and the
+number of round-trips**. Chasing input tokens has diminishing returns;
+cutting output and turns does not. Two measures were added accordingly:
+
+- **`kg_modify_where`** — select-and-mutate in one atomic call (filter
+  predicates + `updates`), replacing the `kg_query → filter-in-prompt →
+  loop N × kg_modify_element` pattern. O(1) round-trips instead of O(N).
+- **Compact returns** — `add_many`/`modify_many`/`modify_where` return
+  `{count, sample_ids≤10, truncated, turn}` (no full id echo the model
+  re-narrates); `kg_query` gains `compact=true` →
+  `{count, by_type, ids, edges_count}` (no per-node attribute dump).
+
+**Ablation scenario** (`kg_bridge/benchmark/live/prompts_modwhere/`):
+same deterministic task (30 windows, sill 0.60 → conditional fix to ≥0.90)
+under the *same* `kg-many` profile, two forced strategies — `10_loop`
+(query + per-element loop) vs `20_where` (one `kg_modify_where`). KG-only
+(no flat needed); run:
+
+```
+python kg_bridge/benchmark/live/run_live.py --kg-dir <bench-kg-many> \
+  --prompts-dir kg_bridge/benchmark/live/prompts_modwhere \
+  --out kg_bridge/benchmark/live/out_modwhere --snapshot --max-turns 120 --yes
+python kg_bridge/benchmark/live/verify.py --out kg_bridge/benchmark/live/out_modwhere
+```
+
+`verify.py` confirms both strategies reach the same correct state (1 lvl /
+30 wall / 30 win, all sill ≥ 0.9); the `loop` vs `where` cost/turns/output
+delta is the measured economy. (`--flat-dir` is now optional for such
+KG-only ablations.) Numbers to be filled from the run.
+
 ## Reproduce
 
 ```bash

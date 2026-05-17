@@ -202,12 +202,14 @@ def main() -> int:
                     help="required: confirms you accept REAL billable API calls")
     args = ap.parse_args()
 
-    if not args.flat_dir or not args.kg_dir:
-        die("--flat-dir and --kg-dir are required (or set KG_BENCH_FLAT_DIR / "
-            "KG_BENCH_KG_DIR). --many-dir is optional (3rd profile).")
+    if not args.kg_dir:
+        die("--kg-dir is required (or set KG_BENCH_KG_DIR). --flat-dir is "
+            "optional (omit for a KG-only ablation run); --many-dir is the "
+            "optional 3rd profile.")
 
     profiles: dict[str, dict] = {}
-    profiles["flat"] = {"dir": Path(args.flat_dir).resolve()}
+    if args.flat_dir:
+        profiles["flat"] = {"dir": Path(args.flat_dir).resolve()}
     profiles["kg"] = {"dir": Path(args.kg_dir).resolve()}
     if args.many_dir:
         profiles["kg-many"] = {"dir": Path(args.many_dir).resolve()}

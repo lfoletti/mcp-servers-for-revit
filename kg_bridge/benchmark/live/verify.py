@@ -262,6 +262,26 @@ def chk_wow(kgs, snap, text):
                  basis="state(Tower: 3 lvl/30 wall/18 win, all sill>=0.9)")
 
 
+def _modwhere_check(kgs, name, text):
+    def c(d):
+        w = live_nodes(d, "Window")
+        return [len(live_nodes(d, "Level")) == 1,
+                len(live_nodes(d, "Wall")) == 30,
+                len(w) == 30,
+                all(float(x.get("sill_height", -1)) >= 0.9 - 1e-9
+                    for x in w) if w else False]
+    return _wrap(*_bim_state(kgs, name, c), text=text,
+                 basis="state(%s: 1 lvl/30 wall/30 win, all sill>=0.9)" % name)
+
+
+def chk_mw_loop(kgs, snap, text):
+    return _modwhere_check(kgs, "MWLoop", text)
+
+
+def chk_mw_where(kgs, snap, text):
+    return _modwhere_check(kgs, "MWWhere", text)
+
+
 def _level_elev_map(d):
     return {l["id"]: round(float(l.get("elevation", -999)), 1)
             for l in live_nodes(d, "Level")}
@@ -334,6 +354,8 @@ CHECKS: dict[str, Callable] = {
     "10_cs9_resume_a_build": chk_cs9_a,
     "20_cs9_resume_b_continue": chk_cs9_b,
     "30_cs10_integrity_delete": chk_cs10,
+    "10_loop": chk_mw_loop,
+    "20_where": chk_mw_where,
 }
 
 
