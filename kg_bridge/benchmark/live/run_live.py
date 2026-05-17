@@ -123,7 +123,7 @@ def parse_claude_json(stdout: str) -> dict:
         "output_tokens": u.get("output_tokens"),
         "cache_read_input_tokens": u.get("cache_read_input_tokens"),
         "cache_creation_input_tokens": u.get("cache_creation_input_tokens"),
-        "result_head": str(obj.get("result", ""))[:200],
+        "result_head": str(obj.get("result", ""))[:2500],
     }
 
 
