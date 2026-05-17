@@ -78,3 +78,31 @@ Interpret alongside `../../../BENCHMARK.md`: the offline harness gives exact,
 assumption-free round-trip counts and modelled tokens; this gives the real
 numbers but with API variance (rerun N times if you need confidence
 intervals).
+
+## Bulk-economy ceiling variant (`prompts_bulkN/`)
+
+Separate prompt set that measures the *achievable ceiling* of the bulk
+economy and how it **scales with N**, on the only entity both layers can
+represent natively — **Rooms** (so it stays in-domain for the upstream
+flat store; windows/walls would only re-expose the representational gap,
+not measure bulk). Two N points (N=10, N=20), distinct project names so the
+two points don't interfere within a profile's accumulated state. Prompts
+are *directive* ("if a bulk tool exists, do it in ONE call") — this is the
+ceiling, not spontaneous behaviour.
+
+Per N: a seed (create N rooms) + an edit (set area of ALL rooms). flat has
+only single `store_room_data` exposed in MCP, kg only single
+`kg_modify_element` → both loop; only `kg-many` has the bulk path. The
+slope of cost/turns vs N is the demonstration.
+
+```
+python kg_bridge/benchmark/live/run_live.py \
+  --flat-dir <bench-flat> --kg-dir <bench-kg> --many-dir <bench-kg-many> \
+  --prompts-dir kg_bridge/benchmark/live/prompts_bulkN \
+  --out        kg_bridge/benchmark/live/out_bulkN \
+  --max-turns 80 --yes
+```
+
+`--max-turns 80` lets the single-loop profiles actually finish 20 ops (≈
+truncation-free). Separate `--out` so it does not clobber the main run's
+`out/`. The MCP servers are already approved (same profile dirs).

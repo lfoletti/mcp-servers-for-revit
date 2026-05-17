@@ -1,0 +1,8 @@
+In project "RoomBench20", set the area of EVERY room to 25.0 m².
+
+Enumerate the rooms from your project-memory tools (not from this
+conversation). IMPORTANT: if a bulk/batch modify tool is available, perform
+the entire update in a SINGLE call; only if no batch tool exists, update them
+one per call.
+
+Then confirm the exact count of rooms in "RoomBench20" now at area 25.0 m².
