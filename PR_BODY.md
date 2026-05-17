@@ -38,6 +38,24 @@ answer, instead of believing the model's prose.
   both are correct and the KG is still ~25–40 % cheaper — so it isn't a
   rigged comparison.
 
+**At a glance** (15 deterministic BIM tasks, scored against persisted state):
+
+| | flat `store_*_data` | KG (this fork) |
+|---|--:|--:|
+| Correct (verified vs state) | 6 / 15 | **15 / 15** |
+| Fabricated (confident but false) | **8 / 15** | 0 / 15 |
+| Honest "can't do it" | 1 / 15 | 0 / 15 |
+| Total spend | $10.28 | $8.17 |
+| **$ per _correct_ task** | $1.71 | **$0.54** |
+
+Two controlled micro-benchmarks (same correct end state — cost is the only
+variable):
+
+| | without | with | gain |
+|---|--:|--:|--:|
+| bulk economy scales (round-trip ratio kg/kg-many) | N=10: 3.6× | N=20: 4.3× | widens with N |
+| `kg_modify_where` vs query+loop (N=30) | 45 turns / $1.25 | 15 turns / $0.87 | turns ×3, −31 % |
+
 On the token side, honestly: with prompt caching the input is cheap, so the
 real bill is output + round-trips. The KG helps there too (bulk +
 select-and-mutate + compact returns — e.g. one conditional bulk edit went
