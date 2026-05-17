@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { kgBridge, kgResult, kgError } from "../kg/bridge.js";
+import { kgToolsEnabled, logKgModeOnce } from "../kg/mode.js";
 
 /**
  * Add a typed element node (and optional typed relations) to the project
@@ -9,6 +10,8 @@ import { kgBridge, kgResult, kgError } from "../kg/bridge.js";
  * openings and the edges between them. Use `kg_query` to read it back.
  */
 export function registerKgAddElementTool(server: McpServer) {
+  logKgModeOnce();
+  if (!kgToolsEnabled()) return;
   server.tool(
     "kg_add_element",
     "Add a typed element to the project Knowledge Graph (graph-backed project memory, an alternative to the flat store_*_data tools). Validates against the KG schema; can attach typed relations (e.g. at_level, is_type). Returns the allocated llm_id and the turn.",

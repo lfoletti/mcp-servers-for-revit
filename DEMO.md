@@ -77,6 +77,12 @@ Desktop `claude_desktop_config.json`:
 `kg_bridge/requirements.txt`). `KG_SIDECAR` can override the sidecar path; by
 default it is resolved relative to the repo root.
 
+`KG_BENCH_MODE` selects the profile: `kg` (default — baseline + KG tools) or
+`flat` (kg_* not registered; pure upstream baseline, sidecar never spawns).
+Declare two client entries with the two values to A/B benchmark it yourself —
+full protocol and prompt set in [`BENCHMARK.md`](./BENCHMARK.md) §"Run it
+yourself".
+
 ### Try it (prompts)
 
 - "Add a Level N0 at elevation 0, a WallType GEN_200 (thickness 0.2), then a

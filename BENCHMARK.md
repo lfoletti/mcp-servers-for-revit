@@ -145,10 +145,69 @@ python kg_bridge/benchmark/run_benchmark.py --scale 1
 changes. The harness never spends generation tokens and never touches the key
 beyond the `count_tokens` call.
 
-For ground-truth **wall-clock and real `usage`**, run the five scenario
-prompts through an actual MCP client against the built server (see `DEMO.md`)
-and read `response.usage` + timestamps; the latency-model parameters in this
-doc are placeholders for those measurements.
+## Run it yourself in a real client (A/B by server profile)
+
+This gives you ground-truth `usage` (real input/output tokens) and wall-clock,
+measured by your own MCP client — the rigorous A/B.
+
+**One build, two server profiles**, selected by `KG_BENCH_MODE`:
+
+- `KG_BENCH_MODE=flat` → the kg_* tools are **not registered** (pure upstream
+  baseline; the sidecar never spawns).
+- `KG_BENCH_MODE=kg` (or unset) → baseline **+** the kg_* tools.
+
+The gate lives only in the additive kg_* modules — zero change to the
+upstream core. Declare **two entries** in the client config (Claude Desktop
+`claude_desktop_config.json` shown):
+
+```json
+{
+  "mcpServers": {
+    "revit-flat": {
+      "command": "node",
+      "args": ["ABS/server/build/index.js"],
+      "env": { "KG_BENCH_MODE": "flat" }
+    },
+    "revit-kg": {
+      "command": "node",
+      "args": ["ABS/server/build/index.js"],
+      "env": {
+        "KG_BENCH_MODE": "kg",
+        "KG_PYTHON": "python",
+        "KG_HOME": "ABS/.mcp-revit-kg"
+      }
+    }
+  }
+}
+```
+
+**Protocol** — for each scenario, run the *same* prompt in a *fresh*
+conversation against `revit-flat`, then against `revit-kg`, with the *same*
+model; record the input/output tokens and latency your client/API reports;
+compare. In `revit-kg`, add "use the kg_* tools to track project state" (the
+upstream store_*_data tools are still present and the model must be told to
+prefer the graph — see the methodology caveat).
+
+**No-Revit prompt set** (memory layer only — store_*_data vs kg_*; no Revit
+licence needed). This also surfaces a *representational* gap: store_*_data can
+only hold projects/rooms, so it physically cannot answer S3.
+
+- **Seed** — "Project 'Demo': levels N0 (elev 0) and N1 (elev 3); wall type
+  GEN_200 (thickness 0.2); 20 walls on N0 of GEN_200; 8 windows hosted on
+  them."
+- **S1** — "What changed since the seed?"
+- **S2** — repeat a small edit ("raise wall k height by 0.1") for 10 turns,
+  each followed by "summarise the current state".
+- **S3** — "Which windows are on level N0 and which wall hosts each?"
+- **S4** — "Add 5 levels; the 4th has an invalid elevation; keep the model
+  consistent (all-or-nothing)."
+- **S5** — after the seed, "I changed something by hand — detect and
+  reconcile."
+
+For the **Revit-augmented** variant (adds `get_current_view_elements` etc. on
+the flat side), run the same prompts with a model open in Revit and the
+plugin connected; this matches the modelled scenarios more closely but needs
+the full stack.
 
 ## Reproduce
 

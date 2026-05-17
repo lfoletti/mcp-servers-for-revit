@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { kgBridge, kgResult, kgError } from "../kg/bridge.js";
+import { kgToolsEnabled, logKgModeOnce } from "../kg/mode.js";
 
 /**
  * Query the typed project graph: nodes filtered by type/id, with their typed
@@ -8,6 +9,8 @@ import { kgBridge, kgResult, kgError } from "../kg/bridge.js";
  * flat store has no concept of either a relation or a lifecycle.
  */
 export function registerKgQueryTool(server: McpServer) {
+  logKgModeOnce();
+  if (!kgToolsEnabled()) return;
   server.tool(
     "kg_query",
     "Query the project Knowledge Graph: typed nodes and the relations between them. Filter by node_type and/or llm_id. Hides soft-deleted nodes unless include_deleted=true. This answers structural questions (what is hosted by what, at which level) that a flat key/value store cannot.",

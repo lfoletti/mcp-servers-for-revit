@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { kgBridge, kgResult, kgError } from "../kg/bridge.js";
+import { kgToolsEnabled, logKgModeOnce } from "../kg/mode.js";
 
 /**
  * Demonstrates the KG's all-or-nothing transaction: a batch whose last
@@ -10,6 +11,8 @@ import { kgBridge, kgResult, kgError } from "../kg/bridge.js";
  * prevents the model and the project memory from silently diverging.
  */
 export function registerKgTransactionDemoTool(server: McpServer) {
+  logKgModeOnce();
+  if (!kgToolsEnabled()) return;
   server.tool(
     "kg_transaction_demo",
     "Run a multi-operation batch inside one KG transaction where the last op fails, and show that the graph rolled back completely (before == after). Illustrates atomicity the flat store lacks: there, the first writes would have committed, leaving project memory half-applied.",

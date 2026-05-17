@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { kgBridge, kgResult, kgError } from "../kg/bridge.js";
+import { kgToolsEnabled, logKgModeOnce } from "../kg/mode.js";
 
 /**
  * Return the action-grained change log since a given turn (create / modify /
@@ -9,6 +10,8 @@ import { kgBridge, kgResult, kgError } from "../kg/bridge.js";
  * impossible against a flat key/value store.
  */
 export function registerKgDiffSinceTool(server: McpServer) {
+  logKgModeOnce();
+  if (!kgToolsEnabled()) return;
   server.tool(
     "kg_diff_since",
     "List every Knowledge Graph mutation since turn N (create/modify/delete with before/after). Lets an agent feed only the delta as context instead of re-reading the whole model — and is the basis for detecting out-of-band edits (drift). No equivalent exists on the flat store_*_data tools.",

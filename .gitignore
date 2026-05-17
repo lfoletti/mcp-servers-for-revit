@@ -371,3 +371,6 @@ FodyWeavers.xsd
 # =============================================================================
 .claude/
 .DS_Store
+
+# Editor vault (not part of the project)
+.obsidian/

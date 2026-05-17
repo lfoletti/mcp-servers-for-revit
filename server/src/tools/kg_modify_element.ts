@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { kgBridge, kgResult, kgError } from "../kg/bridge.js";
+import { kgToolsEnabled, logKgModeOnce } from "../kg/mode.js";
 
 /**
  * Modify a node's attributes. Every modification is recorded as an
@@ -8,6 +9,8 @@ import { kgBridge, kgResult, kgError } from "../kg/bridge.js";
  * in-place overwrite that loses what changed.
  */
 export function registerKgModifyElementTool(server: McpServer) {
+  logKgModeOnce();
+  if (!kgToolsEnabled()) return;
   server.tool(
     "kg_modify_element",
     "Update attributes of a Knowledge Graph node. Records a per-action history entry (before/after) so kg_diff_since can report exactly what changed since a given turn. Schema-validated against the node type.",
