@@ -1,5 +1,12 @@
 # Proposal — graph-backed project memory (Knowledge Graph) for mcp-servers-for-revit
 
+> **Repo / fork description:** 🤖 mcp-servers-for-revit + a graph-backed
+> project-memory layer (typed/historized/atomic Knowledge Graph) —
+> additive, zero core changes, benchmarked.
+>
+> Suggested topics: `mcp` `revit` `knowledge-graph` `bim` `ai`
+> `model-context-protocol`
+
 *Suggested as a **GitHub Discussion / proposal** rather than a bare PR: it
 adds an optional capability and the repo has no contributing guide, so a
 conversation is more useful than a drive-by PR. Everything is on the branch
