@@ -36,6 +36,18 @@ export function kgToolsEnabled(): boolean {
   return !disabled;
 }
 
+/**
+ * Bulk-variant gate. The `_many` tools (atomic batch over N elements) only
+ * register in `kg-many` mode, so the benchmark can isolate single-call vs
+ * bulk: `kg` = singles only, `kg-many` = singles + _many. Mirrors the
+ * claude-in-revit "bulk tool variant policy" (~70-90% fewer tokens +
+ * round-trips on multi-element operations).
+ */
+export function kgManyEnabled(): boolean {
+  const m = rawMode();
+  return kgToolsEnabled() && (m === "kg-many" || m === "many" || m === "all");
+}
+
 let logged = false;
 
 /** Emit the active mode once, on the server's stderr log channel. */
@@ -49,6 +61,7 @@ export function logKgModeOnce(): void {
       ? `KG_TOOLS=${process.env.KG_TOOLS}`
       : "default(kg)";
   process.stderr.write(
-    `[kg] tools ${kgToolsEnabled() ? "ENABLED" : "DISABLED"} (${src})\n`
+    `[kg] tools ${kgToolsEnabled() ? "ENABLED" : "DISABLED"}` +
+      `, _many ${kgManyEnabled() ? "ENABLED" : "DISABLED"} (${src})\n`
   );
 }

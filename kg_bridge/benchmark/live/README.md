@@ -8,16 +8,20 @@ token usage, turn count, wall-clock and cost reported by Claude Code.
 > ⚠️ This makes **real, billable** Anthropic API calls (5 scenarios × 2
 > profiles, multi-turn). `run_live.py` refuses to run without `--yes`.
 
-## Why two profile directories
+## Why separate profile directories
 
-MCP tool availability is per-session. A clean A/B needs the kg_* tools
-present in one run and absent in the other. So we use **two working dirs**,
-each with a `.mcp.json` pointing at the *same built server* with a different
+MCP tool availability is per-session. A clean A/B/C needs distinct tool
+sets per run. So we use **one working dir per profile**, each with a
+`.mcp.json` pointing at the *same built server* with a different
 `KG_BENCH_MODE`:
 
-- `bench-flat/.mcp.json` → `KG_BENCH_MODE=flat` (kg_* not registered; pure
-  upstream baseline; sidecar never spawns)
-- `bench-kg/.mcp.json`   → `KG_BENCH_MODE=kg` (baseline + the 6 kg_* tools)
+- `bench-flat/.mcp.json`    → `KG_BENCH_MODE=flat` (kg_* not registered;
+  pure upstream baseline; sidecar never spawns)
+- `bench-kg/.mcp.json`      → `KG_BENCH_MODE=kg` (baseline + the kg_* tools,
+  single-element ops only)
+- `bench-kg-many/.mcp.json` → `KG_BENCH_MODE=kg-many` (kg_* **+** the
+  `_many` bulk variants) — optional 3rd profile for the bulk-economy
+  scenario (S6). Use a distinct `KG_HOME` so its state is independent.
 
 These dirs live **outside** this repo (they hold machine-specific absolute
 paths) — they are not part of the deliverable. This kit (prompts + runner)
@@ -25,18 +29,19 @@ is portable: profile dirs are arguments.
 
 ## Preconditions
 
-1. Build the server once:
+1. Build the server (re-run after any TS change, e.g. the `_many` tools):
    ```
    cd server && npm install && npm run build
    ```
 2. Approve the MCP server **interactively once per profile dir** (headless
    `-p` runs can only use an already-approved `.mcp.json` server):
    ```
-   cd <bench-flat> && claude      # approve, run /mcp (expect 0 kg_* tools), exit
-   cd <bench-kg>   && claude      # approve, run /mcp (expect 6 kg_* tools), exit
+   cd <bench-flat>    && claude   # approve, /mcp -> expect 0 kg_* tools, exit
+   cd <bench-kg>      && claude   # approve, /mcp -> expect 6 kg_* tools, exit
+   cd <bench-kg-many> && claude   # approve, /mcp -> 6 kg_* + 2 *_many, exit
    ```
-   Seeing the 6 `kg_*` tools only under `bench-kg` is itself the proof that
-   the `KG_BENCH_MODE` gate works.
+   The tool-set difference across profiles is itself the proof the
+   `KG_BENCH_MODE` gate works (0 / 6 / 8 kg_* tools).
 
 ## Run
 
@@ -44,10 +49,14 @@ is portable: profile dirs are arguments.
 python kg_bridge/benchmark/live/run_live.py \
   --flat-dir  <abs path to bench-flat> \
   --kg-dir    <abs path to bench-kg> \
+  --many-dir  <abs path to bench-kg-many>   # optional 3rd profile
   --yes
 ```
 
-(or set `KG_BENCH_FLAT_DIR` / `KG_BENCH_KG_DIR` instead of the flags.)
+(or set `KG_BENCH_FLAT_DIR` / `KG_BENCH_KG_DIR` / `KG_BENCH_MANY_DIR`
+instead of the flags. Omit `--many-dir` for a 2-profile flat-vs-kg run.)
+The table adds pairwise ratios `flat/kg` and, when present, `kg/kg-many`
+(the bulk economy — clearest on S6).
 
 Options: `--no-reset` (keep persisted state between runs; default wipes
 `KG_HOME` and the flat `revit-data.db` before each profile so the seed

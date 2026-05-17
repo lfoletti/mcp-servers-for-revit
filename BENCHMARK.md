@@ -150,36 +150,44 @@ beyond the `count_tokens` call.
 This gives you ground-truth `usage` (real input/output tokens) and wall-clock,
 measured by your own MCP client — the rigorous A/B.
 
-**One build, two server profiles**, selected by `KG_BENCH_MODE`:
+**One build, three server profiles**, selected by `KG_BENCH_MODE`:
 
 - `KG_BENCH_MODE=flat` → the kg_* tools are **not registered** (pure upstream
   baseline; the sidecar never spawns).
-- `KG_BENCH_MODE=kg` (or unset) → baseline **+** the kg_* tools.
+- `KG_BENCH_MODE=kg` (or unset) → baseline **+** the kg_* tools (single-element
+  ops only).
+- `KG_BENCH_MODE=kg-many` → baseline + kg_* **+** the `_many` bulk variants
+  (`kg_add_elements_many`, `kg_modify_elements_many`): N elements in one
+  atomic call / one round-trip.
 
 The gate lives only in the additive kg_* modules — zero change to the
-upstream core. Declare **two entries** in the client config (Claude Desktop
-`claude_desktop_config.json` shown):
+upstream core. Declare **three entries** in the client config (Claude Desktop
+`claude_desktop_config.json` shown; same shape for Claude Code `.mcp.json`):
 
 ```json
 {
   "mcpServers": {
-    "revit-flat": {
-      "command": "node",
-      "args": ["ABS/server/build/index.js"],
-      "env": { "KG_BENCH_MODE": "flat" }
-    },
-    "revit-kg": {
-      "command": "node",
-      "args": ["ABS/server/build/index.js"],
-      "env": {
-        "KG_BENCH_MODE": "kg",
-        "KG_PYTHON": "python",
-        "KG_HOME": "ABS/.mcp-revit-kg"
-      }
-    }
+    "revit-flat":    { "command": "node", "args": ["ABS/server/build/index.js"],
+      "env": { "KG_BENCH_MODE": "flat" } },
+    "revit-kg":      { "command": "node", "args": ["ABS/server/build/index.js"],
+      "env": { "KG_BENCH_MODE": "kg",      "KG_PYTHON": "python",
+               "KG_HOME": "ABS/.kg-bench" } },
+    "revit-kg-many": { "command": "node", "args": ["ABS/server/build/index.js"],
+      "env": { "KG_BENCH_MODE": "kg-many", "KG_PYTHON": "python",
+               "KG_HOME": "ABS/.kg-bench-many" } }
   }
 }
 ```
+
+**On bulk and the original C# command set (scope honesty):** the upstream
+Revit commands in `commandset/Commands` are *already* batch-shaped — every
+`create_*` takes a `List<…Info>`, `delete_element` a `string[]`. Upstream
+already follows the bulk-variant policy on the Revit side; there is nothing
+to "add a `_many` to" there. The single-vs-bulk economy is therefore
+benchmarked where this PoC actually contributes — the **KG memory layer**
+(`kg` vs `kg-many`) — which is also the only part measurable offline without
+Revit. The Revit-side bulk economy already exists upstream and would only be
+an *agent-usage* measurement (loop vs batch) under live Revit (Stage 2).
 
 **Protocol** — for each scenario, run the *same* prompt in a *fresh*
 conversation against `revit-flat`, then against `revit-kg`, with the *same*
@@ -203,6 +211,10 @@ only hold projects/rooms, so it physically cannot answer S3.
   consistent (all-or-nothing)."
 - **S5** — after the seed, "I changed something by hand — detect and
   reconcile."
+- **S6** (bulk) — "set the sill of ALL windows to 0.8 m". The differentiator:
+  `kg` loops `kg_modify_element` (≥ N round-trips); `kg-many` does one
+  `kg_modify_elements_many` (1 round-trip). Quantifies the bulk-variant
+  economy in the contributed layer.
 
 For the **Revit-augmented** variant (adds `get_current_view_elements` etc. on
 the flat side), run the same prompts with a model open in Revit and the

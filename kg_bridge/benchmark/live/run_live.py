@@ -42,7 +42,13 @@ HERE = Path(__file__).resolve().parent
 SUFFIX = {
     "flat": " (Use the store_* data tools to persist and query project state.)",
     "kg": " (Use the kg_* tools to record and query project state.)",
+    "kg-many": " (Use the kg_* tools to record and query project state; "
+               "when acting on multiple elements, prefer the *_many bulk "
+               "variants.)",
 }
+
+# Pairs to report ratios for, when both profiles are present.
+RATIO_PAIRS = [("flat", "kg"), ("kg", "kg-many")]
 
 
 def die(msg: str, code: int = 2) -> None:
@@ -154,6 +160,9 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--flat-dir", default=os.environ.get("KG_BENCH_FLAT_DIR"))
     ap.add_argument("--kg-dir", default=os.environ.get("KG_BENCH_KG_DIR"))
+    ap.add_argument("--many-dir", default=os.environ.get("KG_BENCH_MANY_DIR"),
+                    help="optional 3rd profile: KG + _many bulk variants "
+                         "(KG_BENCH_MODE=kg-many)")
     ap.add_argument("--prompts-dir", default=str(HERE / "prompts"))
     ap.add_argument("--out", default=str(HERE / "out"))
     ap.add_argument("--claude", default="claude")
@@ -167,26 +176,30 @@ def main() -> int:
 
     if not args.flat_dir or not args.kg_dir:
         die("--flat-dir and --kg-dir are required (or set KG_BENCH_FLAT_DIR / "
-            "KG_BENCH_KG_DIR).")
-    if not args.yes:
-        die("This runs REAL, billable Anthropic API calls (5 scenarios x 2 "
-            "profiles, multi-turn). Re-run with --yes to confirm.")
+            "KG_BENCH_KG_DIR). --many-dir is optional (3rd profile).")
 
-    flat_dir = Path(args.flat_dir).resolve()
-    kg_dir = Path(args.kg_dir).resolve()
+    profiles: dict[str, dict] = {}
+    profiles["flat"] = {"dir": Path(args.flat_dir).resolve()}
+    profiles["kg"] = {"dir": Path(args.kg_dir).resolve()}
+    if args.many_dir:
+        profiles["kg-many"] = {"dir": Path(args.many_dir).resolve()}
+    for label in profiles:
+        profiles[label].update(read_profile(profiles[label]["dir"]))
+
+    if not args.yes:
+        die("This runs REAL, billable Anthropic API calls (scenarios x {} "
+            "profiles, multi-turn). Re-run with --yes to confirm.".format(
+                len(profiles)))
+
     prompts = sorted(Path(args.prompts_dir).glob("*.txt"))
     if not prompts:
         die("no prompt .txt files in {}".format(args.prompts_dir))
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    profiles = {
-        "flat": {"dir": flat_dir, **read_profile(flat_dir)},
-        "kg": {"dir": kg_dir, **read_profile(kg_dir)},
-    }
-    print("Profiles: flat={} (mode={}) | kg={} (mode={})".format(
-        flat_dir, profiles["flat"]["mode"],
-        kg_dir, profiles["kg"]["mode"]))
+    print("Profiles: " + " | ".join(
+        "{}={} (mode={})".format(lbl, p["dir"], p["mode"])
+        for lbl, p in profiles.items()))
 
     results: dict[str, dict[str, dict]] = {}
     for label, prof in profiles.items():
@@ -224,22 +237,27 @@ def main() -> int:
              "| Scenario | Profile | in tok | out tok | turns | wall s "
              "| cost $ | err |",
              "|---|---|--:|--:|--:|--:|--:|:--:|"]
+    order = [p for p in ("flat", "kg", "kg-many") if p in profiles]
     for scen in sorted(results):
-        for label in ("flat", "kg"):
+        for label in order:
             m = results[scen].get(label, {})
             lines.append("| {} | {} | {} | {} | {} | {} | {} | {} |".format(
                 scen, label, m.get("input_tokens"), m.get("output_tokens"),
                 m.get("num_turns"), m.get("wall_s"),
                 m.get("total_cost_usd"), m.get("is_error")))
-        f, k = results[scen].get("flat", {}), results[scen].get("kg", {})
-        lines.append("| **{}** | **flat/kg** | **{}** | {} | {} | {} | {} | |"
-                     .format(scen,
-                             ratio(f.get("input_tokens"), k.get("input_tokens")),
-                             ratio(f.get("output_tokens"), k.get("output_tokens")),
-                             ratio(f.get("num_turns"), k.get("num_turns")),
-                             ratio(f.get("wall_s"), k.get("wall_s")),
-                             ratio(f.get("total_cost_usd"),
-                                   k.get("total_cost_usd"))))
+        for a, b in RATIO_PAIRS:
+            if a not in profiles or b not in profiles:
+                continue
+            ma, mb = results[scen].get(a, {}), results[scen].get(b, {})
+            lines.append(
+                "| **{}** | **{}/{}** | **{}** | {} | **{}** | {} | {} | |"
+                .format(scen, a, b,
+                        ratio(ma.get("input_tokens"), mb.get("input_tokens")),
+                        ratio(ma.get("output_tokens"), mb.get("output_tokens")),
+                        ratio(ma.get("num_turns"), mb.get("num_turns")),
+                        ratio(ma.get("wall_s"), mb.get("wall_s")),
+                        ratio(ma.get("total_cost_usd"),
+                              mb.get("total_cost_usd"))))
     md = "\n".join(lines) + "\n"
     (out_dir / "live_results.md").write_text(md, encoding="utf-8")
     print("\n" + md)

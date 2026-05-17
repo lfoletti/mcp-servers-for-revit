@@ -118,6 +118,37 @@ def main() -> int:
               and dead["nodes"][0]["deleted_at_turn"] is not None,
               "soft-deleted node hidden by default, retained with deleted_at_turn")
 
+        section("bulk variants (1 round-trip, atomic) — bulk-tool policy")
+        before_turn = b.call("stats")["turn"]
+        added = b.call("add_many", items=[
+            {"node_type": "Window", "attrs": {
+                "type_ref": wt["llm_id"], "host_wall_ref": wall["llm_id"],
+                "position": [float(i), 0.0], "sill_height": 0.9,
+                "head_height": 2.1}} for i in range(8)
+        ])
+        check(added["count"] == 8
+              and b.call("stats")["turn"] == before_turn + 1,
+              "add_many: 8 windows created in ONE call / ONE turn")
+        modded = b.call("modify_many", items=[
+            {"llm_id": wid, "updates": {"sill_height": 0.8}}
+            for wid in added["llm_ids"]
+        ])
+        win0 = b.call("query", llm_id=added["llm_ids"][0])["nodes"][0]
+        check(modded["count"] == 8 and win0["attrs"]["sill_height"] == 0.8,
+              "modify_many: 'set sill of all windows to 0.8' in ONE call")
+        n_before = b.call("stats")["nodes_total"]
+        bad = None
+        try:
+            b.call("add_many", items=[
+                {"node_type": "Level", "attrs": {"name": "BX", "elevation": 1.0}},
+                {"node_type": "Frobnicator", "attrs": {"name": "boom"}},
+            ])
+        except AssertionError as e:
+            bad = str(e)
+        check(bad is not None
+              and b.call("stats")["nodes_total"] == n_before,
+              "bulk add with one invalid item rolls back the WHOLE batch")
+
         section("atomic rollback (the @kg_synced guarantee, KG side)")
         demo = b.call("transaction_demo")
         show("transaction_demo", demo)

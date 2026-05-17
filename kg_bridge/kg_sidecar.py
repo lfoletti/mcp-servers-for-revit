@@ -167,6 +167,52 @@ def m_modify_element(p: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _add_one(kg: Any, spec: Dict[str, Any]) -> str:
+    """Per-item add (node + optional typed edges). No transaction here — the
+    caller owns the transaction so unit and bulk share one code path (the
+    project's bulk-variant policy: extract _do_one, wrap N in a single Tx)."""
+    new_id = kg.add_node(spec["node_type"], spec.get("attrs") or {},
+                         llm_id=spec.get("llm_id"))
+    for e in spec.get("edges") or []:
+        etype = e["type"]
+        if "to" in e:
+            kg.add_edge(new_id, e["to"], etype)
+        elif "from" in e:
+            kg.add_edge(e["from"], new_id, etype)
+        else:
+            raise ValueError("edge needs 'to' or 'from': {}".format(e))
+    return new_id
+
+
+def m_add_many(p: Dict[str, Any]) -> Dict[str, Any]:
+    """Atomic bulk create. One transaction, one turn, N items: if any item
+    fails the WHOLE batch rolls back (no partial project state). Mirrors the
+    claude-in-revit bulk-variant policy and reinforces the S4 atomicity story
+    at scale. One agent<->tool round-trip instead of N."""
+    kg = _kg(p.get("project_id", "default"))
+    items = p["items"]
+    new_ids = []
+    with kg.transaction():
+        kg.advance_turn()
+        for spec in items:
+            new_ids.append(_add_one(kg, spec))
+    return {"count": len(new_ids), "llm_ids": new_ids, "turn": kg.turn}
+
+
+def m_modify_many(p: Dict[str, Any]) -> Dict[str, Any]:
+    """Atomic bulk modify. One transaction, one turn, N {llm_id, updates}.
+    The "set sill of ALL windows" case: 1 round-trip vs N single calls."""
+    kg = _kg(p.get("project_id", "default"))
+    items = p["items"]
+    ids = []
+    with kg.transaction():
+        kg.advance_turn()
+        for it in items:
+            kg.modify_node(it["llm_id"], it["updates"])
+            ids.append(it["llm_id"])
+    return {"count": len(ids), "llm_ids": ids, "turn": kg.turn}
+
+
 def m_soft_delete(p: Dict[str, Any]) -> Dict[str, Any]:
     kg = _kg(p.get("project_id", "default"))
     llm_id = p["llm_id"]
@@ -284,7 +330,9 @@ _DISPATCH = {
     "health": m_health,
     "schema": m_schema,
     "add_element": m_add_element,
+    "add_many": m_add_many,
     "modify_element": m_modify_element,
+    "modify_many": m_modify_many,
     "soft_delete": m_soft_delete,
     "query": m_query,
     "diff_since": m_diff_since,
