@@ -11,14 +11,29 @@
 it if you turn them on, or to open a PR if there's interest. Everything is
 on the branch `feat/kg-memory-poc`; none of your core files are touched.*
 
-## The short version
+## In a few words
 
-I forked the project to try an idea: give the agent a real **memory of the
-model** — a typed, queryable Knowledge Graph kept alongside the Revit
-project — instead of only the flat `store_*_data` SQLite scratchpad.
+A first try at combining the agent with a larger, persistent **memory of
+the model** — a typed, queryable Knowledge Graph (KG) kept alongside the
+Revit project. Think of it as a continuation of the `store_*_data` you
+already have for room info, but expanded to the whole BIM scale (walls,
+windows, levels, types and the relations between them), with the history of
+changes and atomic edits.
 
-I went in expecting a token-economy win. The bigger surprise was about
-**trust**.
+I went in expecting a token-economy win, but it turns out the bigger impact
+is on **trust** and confidence. Over 15 deterministic BIM tasks — scored
+against the *actual persisted state*, not the model's prose — the flat
+`store_*_data` path answered a confident *"done"* on **8 of 15** while
+nothing had really been stored: it can't represent a building, so it
+essentially made the answer up. The KG layer was **15/15 correct**. The
+token side is real but secondary (input is cache-cheap; the KG mostly
+saves output and round-trips).
+
+So, the question for you: is a persistent model-memory layer like this
+something you'd want in mcp-servers-for-revit — and what would it be worth
+to the project to have an agent that *cannot* silently fabricate building
+state? The rest of this write-up is the detail, the numbers, and how it's
+wired (additive — nothing in your core is touched).
 
 ## What I found (benchmark)
 
