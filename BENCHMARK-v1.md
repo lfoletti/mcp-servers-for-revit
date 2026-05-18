@@ -20,6 +20,18 @@ TS + 13 tests service qui miment le sidecar + fumée ES 8/8). Donc :
   final v1 vs `.kg.json` PoC (`v1_state_dump.mjs`). Le `verify.py`
   par-scénario (sidecar/KG_HOME-centré) est **hors périmètre v1**.
 
+> **Régime = `kg-many` (bulk) sur les DEUX stacks.** C'est la baseline
+> *livrée* de claude-in-revit (singles + `_many`/`kg_modify_where` ;
+> BENCHMARK.md « kg-many is the shipped baseline »). Le défaut produit a
+> été aligné (`mode.ts` : `(unset) → kg-many`) ET les 2 `.mcp.json`
+> forcent `KG_BENCH_MODE=kg-many` (indispensable côté PoC : la branche
+> gelée garde l'ancien défaut `kg`). Comparer en `kg` (singles) serait
+> hors-baseline. Nuance honnête : `run_live` via `--kg-dir` applique le
+> suffixe générique `SUFFIX["kg"]` (« use the kg_* tools »), pas le
+> steering « prefer the *_many bulk variants » ; les outils bulk sont
+> *disponibles* (régime livré) mais le modèle n'est pas *forcé* à les
+> préférer — symétrique sur les 2 stacks, donc comparaison équitable.
+
 ## Stacks
 
 | | PoC (baseline gelée) | v1 |

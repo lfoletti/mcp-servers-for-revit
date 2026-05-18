@@ -7,7 +7,7 @@
         "C:/Users/lauro/Documents/IT/poc-baseline/server/build/index.js"
       ],
       "env": {
-        "KG_BENCH_MODE": "kg",
+        "KG_BENCH_MODE": "kg-many",
         "KG_PYTHON": "C:/Users/lauro/AppData/Local/anaconda3/envs/revitmcp/python.exe",
         "KG_HOME": "C:/Users/lauro/Documents/IT/poc-baseline/.kg-bench-poc"
       }

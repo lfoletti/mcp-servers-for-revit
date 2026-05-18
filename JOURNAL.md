@@ -6,6 +6,32 @@ Journal de bord du travail KG. Convention reprise du projet source
 
 ---
 
+## 2026-05-18 — Fix : bulk (`kg-many`) par défaut = baseline claude-in-revit
+
+Relevé par l'utilisateur avant de lancer le bench (à raison) : v1
+n'était **pas** bulk par défaut. `mode.ts` `rawMode()` défaut = `"kg"`
+→ `kgManyEnabled()` false → `kg_add_elements_many` /
+`kg_modify_elements_many` / `kg_modify_where` **non enregistrés**. Or
+claude-in-revit livre la *bulk-variant policy* (BENCHMARK.md : « kg-many
+is the shipped baseline; the no-bulk profile is retired »). Le défaut
+produit était donc en-dessous de la baseline qu'on compare.
+
+- `server/src/kg/mode.ts` : défaut `"kg"` → **`"kg-many"`** (1 ligne +
+  doc d'en-tête). `KG_BENCH_MODE=kg` reste dispo pour le profil
+  singles-only. Build prod vert, **suite 60/60** (mode.ts non couvert
+  par les tests mais aucune régression).
+- `profiles/{v1-kg,poc-kg}/.mcp.json` : `KG_BENCH_MODE` `kg` → **`kg-many`**.
+  Indispensable côté **PoC** : la branche gelée `9b9f680` garde l'ancien
+  défaut `kg`, donc le profil DOIT forcer `kg-many` pour comparer la
+  vraie baseline livrée.
+- `BENCHMARK-v1.md` : régime `kg-many` sur les 2 stacks documenté +
+  nuance honnête `run_live --kg-dir` ⇒ suffixe générique `SUFFIX["kg"]`
+  (bulk *disponible*, pas *forcé* ; symétrique 2 stacks = équitable).
+
+**Conséquence run** : tout run lancé avant ce fix était en `kg`
+(singles), **hors baseline** → à refaire. L'ordre v1↔PoC reste sans
+incidence (runs indépendants, dossiers `--out` distincts).
+
 ## 2026-05-18 — ÉTAPE 6 : scaffolding A/B live posé (exécution = poste user, facturable)
 
 Choix utilisateur §10.6 : **A/B live complet** (Claude Code réel,

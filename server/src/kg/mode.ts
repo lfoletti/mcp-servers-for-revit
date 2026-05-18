@@ -8,7 +8,9 @@
  * before `server.tool(...)` when disabled. When the kg_* tools are not
  * registered, the Python sidecar is never spawned (the bridge is lazy).
  *
- *   KG_BENCH_MODE = kg | both | (unset)   -> kg_* tools REGISTERED
+ *   KG_BENCH_MODE = (unset) | kg-many     -> kg_* REGISTERED + `_many` bulk
+ *                                            (the shipped claude-in-revit baseline)
+ *   KG_BENCH_MODE = kg                    -> kg_* REGISTERED, singles only (no bulk)
  *   KG_BENCH_MODE = flat | off            -> kg_* tools ABSENT (pure baseline)
  *
  * Aliases accepted for convenience: KG_TOOLS, and on/off/with/without/0/1.
@@ -19,7 +21,12 @@
  * to use the kg_* tools for project state (see BENCHMARK.md).
  */
 function rawMode(): string {
-  return (process.env.KG_BENCH_MODE ?? process.env.KG_TOOLS ?? "kg")
+  // Défaut = "kg-many" : la baseline **livrée** de claude-in-revit est la
+  // bulk-variant policy (singles + `_many`). v1 doit s'aligner — sinon le
+  // produit par défaut serait moins capable que la baseline qu'on compare
+  // (BENCHMARK.md : "kg-many is the shipped baseline; the no-bulk profile
+  // is retired"). Mettre `KG_BENCH_MODE=kg` pour le profil singles-only.
+  return (process.env.KG_BENCH_MODE ?? process.env.KG_TOOLS ?? "kg-many")
     .trim()
     .toLowerCase();
 }
