@@ -6,6 +6,38 @@ Journal de bord du travail KG. Convention reprise du projet source
 
 ---
 
+## 2026-05-18 — Fusion single/`_many` : outils KG list-native (défaut de conception corrigé)
+
+Relevé par l'utilisateur : les commandes C# upstream sont **list-native
+par design** (`create_level(List<…>)`, `delete_element(string[])`) ; le
+split KG `single` vs `_many` était une quasi-redondance (raison d'être =
+l'A/B single-vs-bulk du PoC, **épuisée** depuis que le bulk est le
+défaut). Décidé (avec l'utilisateur) : **fusionner maintenant, avant le
+run 2, noms d'outils conservés**.
+
+**Couche outil seulement — `core/` (25) et `persist.ts` (19) NON
+touchés.**
+
+- `service.ts` : `mAddElement` prend `elements:[…]` (1..N, atomique, 1
+  turn — absorbe `add_many`) ; `mModifyElement` prend `edits:[{llm_id,
+  updates}]` (absorbe `modify_many`) ; `mSoftDelete` prend `llm_ids:[…]`.
+  `add_many`/`modify_many` retirés du dispatch. `modify_where` conservé
+  (sélection par prédicat — besoin distinct, pas redondant).
+- Outils : `kg_add_element`/`kg_modify_element`/`kg_soft_delete` schémas
+  list-native (mêmes noms). `kg_add_elements_many.ts` /
+  `kg_modify_elements_many.ts` **supprimés**. `kg_modify_where.ts`
+  rebranché `kgManyEnabled`→`kgToolsEnabled`.
+- `mode.ts` : `kgManyEnabled()` supprimé ; ne reste que le gate on/off
+  (`flat/off`). `kg-many` = alias inoffensif « KG on » (configs/PoC).
+- `run_live.py` : `SUFFIX["kg-many"]` rendu **agnostique de la forme**
+  (« N en UN appel » — vaut v1 liste & PoC `_many`). `BENCHMARK-v1.md`
+  régime mis à jour.
+
+Suite **62/62** (25 core + 19 persist + 18 service réécrits), build prod
+`tsc` vert. Conséquence étape 6 : le run 2 comparera la **surface
+réellement livrée** v1 (list-native) vs PoC gelé (split) — plus honnête ;
+le run 1 a déjà isolé le coût substrat.
+
 ## 2026-05-18 — Étape 6, run 1 (sans steering) : le bulk est INDISPENSABLE à v1
 
 Premier A/B live exécuté (poste user, Revit 2025). **Résultat clé, pas un

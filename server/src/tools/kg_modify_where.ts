@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { kgService, kgResult, kgError } from "../kg/service.js";
-import { kgManyEnabled, logKgModeOnce } from "../kg/mode.js";
+import { kgToolsEnabled, logKgModeOnce } from "../kg/mode.js";
 
 /**
  * Select-and-mutate in ONE call: filter live nodes of a type by attribute
@@ -9,12 +9,13 @@ import { kgManyEnabled, logKgModeOnce } from "../kg/mode.js";
  * "kg_query → filter in the prompt → loop kg_modify_element ×N" pattern with
  * a single round-trip and a compact return (count + small id sample, no
  * per-node echo). Highest token-economy lever for conditional bulk edits
- * (e.g. "raise the sill of every window below 0.9 m to 0.9"). Only
- * registered in `kg-many` mode.
+ * (e.g. "raise the sill of every window below 0.9 m to 0.9"). Kept as a
+ * distinct tool (predicate-targeted) — NOT redundant with the list-native
+ * kg_modify_element (id-targeted); registered whenever the KG is enabled.
  */
 export function registerKgModifyWhereTool(server: McpServer) {
   logKgModeOnce();
-  if (!kgManyEnabled()) return;
+  if (!kgToolsEnabled()) return;
   server.tool(
     "kg_modify_where",
     "Atomically modify ALL Knowledge Graph nodes of a type that match attribute predicates, in one call. Prefer this over query→filter→loop for conditional bulk edits ('set X for every Y where Z'): one transaction, one round-trip, compact return (no per-node dump). All-or-nothing.",

@@ -43,8 +43,8 @@ SUFFIX = {
     "flat": " (Use the store_* data tools to persist and query project state.)",
     "kg": " (Use the kg_* tools to record and query project state.)",
     "kg-many": " (Use the kg_* tools to record and query project state; "
-               "when acting on multiple elements, prefer the *_many bulk "
-               "variants.)",
+               "when acting on multiple elements, do it in ONE call with "
+               "many elements rather than looping per element.)",
 }
 
 # Pairs to report ratios for, when both profiles are present.

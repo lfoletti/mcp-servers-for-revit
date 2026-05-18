@@ -6,10 +6,19 @@
  * (transport socket → commandes C# ES, étape 3). DESIGN-internalize-es.md
  * §9, §10.4.
  *
- * Iso-comportement voulu vs `kg_sidecar.py` : mêmes noms de méthode, mêmes
- * params, **mêmes formes de résultat** (y compris les projections compactes
- * et le modèle « 1 op MCP == 1 turn ») — pour que le re-bench étape 6 reste
- * comparable au PoC gelé, et que le diff des `kg_*.ts` soit mécanique.
+ * Iso-comportement vs `kg_sidecar.py` pour les lecteurs et la sémantique
+ * (projections compactes, « 1 op MCP == 1 turn », snapshot/rollback).
+ *
+ * **Fusion single/`_many` (décision design, post run-1 étape 6).** Les
+ * mutateurs sont **list-native 1..N** (`add_element`/`modify_element`/
+ * `soft_delete` prennent une liste ; un lot de 1 = l'ancien « single »),
+ * atomiques sur le lot. `add_many`/`modify_many` SUPPRIMÉS (quasi-
+ * redondance) ; `modify_where` conservé (sélection par prédicat, besoin
+ * distinct). Calque l'API list-native des commandes C# upstream
+ * (`create_level(List<…>)`, `delete_element(string[])`). `core/`
+ * (25 tests) et `persist.ts` (19) **non touchés** ; le re-bench étape 6
+ * compare donc la **surface réellement livrée** vs le PoC gelé (le run 1
+ * a déjà isolé le coût substrat). Noms d'outils inchangés.
  *
  * Cache (§5) : un `ProjectKG` par project_id en mémoire (= cache du blob
  * ES), comme le `_INSTANCES` du sidecar (qui persistait sur disque ; ici
@@ -284,12 +293,8 @@ export class KgService {
         return this.mSchema();
       case "add_element":
         return this.mAddElement(p);
-      case "add_many":
-        return this.mAddMany(p);
       case "modify_element":
         return this.mModifyElement(p);
-      case "modify_many":
-        return this.mModifyMany(p);
       case "modify_where":
         return this.mModifyWhere(p);
       case "soft_delete":
@@ -333,64 +338,41 @@ export class KgService {
     return { node_types, edge_types: [...EDGE_TYPES].sort() };
   }
 
+  /**
+   * Ajout list-native **1..N**, atomique sur le lot, **1 turn** (un lot de
+   * 1 = l'ancien `add_element`). Fusion `add_element`+`add_many` :
+   * supprime la quasi-redondance, calque l'API list-native des commandes
+   * C# upstream (`create_level(List<…>)`). `core/`/`persist.ts` intacts.
+   */
   private async mAddElement(p: Dict): Promise<Dict> {
     const kg = await this.getKg(p["project_id"]);
-    const nodeType = p["node_type"];
-    const attrs = p["attrs"] ?? {};
-    const llmId = p["llm_id"] ?? null;
-    const edges = p["edges"] ?? [];
-    let newId = "";
+    const elements: Dict[] = p["elements"] ?? [];
+    const newIds: string[] = [];
+    let edgesAdded = 0;
     kg.transaction(() => {
       kg.advance_turn();
-      newId = kg.add_node(nodeType, attrs, llmId);
-      for (const e of edges) {
-        const etype = e["type"];
-        if (e["to"] !== undefined) kg.add_edge(newId, e["to"], etype);
-        else if (e["from"] !== undefined)
-          kg.add_edge(e["from"], newId, etype);
-        else
-          throw new Error(`edge needs 'to' or 'from': ${JSON.stringify(e)}`);
+      for (const spec of elements) {
+        newIds.push(addOne(kg, spec));
+        edgesAdded += (spec["edges"] ?? []).length;
       }
     });
     await saveProjectKG(this.getStore(), kg);
-    return { llm_id: newId, turn: kg.turn, edges_added: edges.length };
-  }
-
-  private async mModifyElement(p: Dict): Promise<Dict> {
-    const kg = await this.getKg(p["project_id"]);
-    const llmId = p["llm_id"];
-    kg.transaction(() => {
-      kg.advance_turn();
-      kg.modify_node(llmId, p["updates"]);
-    });
-    await saveProjectKG(this.getStore(), kg);
-    const node = kg.get_node(llmId);
     return {
-      llm_id: llmId,
+      ...idsCompact(newIds),
+      edges_added: edgesAdded,
       turn: kg.turn,
-      modified_at_turn: node[MODIFIED_AT] ?? [],
     };
   }
 
-  private async mAddMany(p: Dict): Promise<Dict> {
+  /** Modif list-native **1..N** `[{llm_id,updates}]`, atomique, 1 turn
+   *  (fusion `modify_element`+`modify_many`). */
+  private async mModifyElement(p: Dict): Promise<Dict> {
     const kg = await this.getKg(p["project_id"]);
-    const items: Dict[] = p["items"];
-    const newIds: string[] = [];
-    kg.transaction(() => {
-      kg.advance_turn();
-      for (const spec of items) newIds.push(addOne(kg, spec));
-    });
-    await saveProjectKG(this.getStore(), kg);
-    return { ...idsCompact(newIds), turn: kg.turn };
-  }
-
-  private async mModifyMany(p: Dict): Promise<Dict> {
-    const kg = await this.getKg(p["project_id"]);
-    const items: Dict[] = p["items"];
+    const edits: Dict[] = p["edits"] ?? [];
     const ids: string[] = [];
     kg.transaction(() => {
       kg.advance_turn();
-      for (const it of items) {
+      for (const it of edits) {
         kg.modify_node(it["llm_id"], it["updates"]);
         ids.push(it["llm_id"]);
       }
@@ -421,20 +403,20 @@ export class KgService {
     };
   }
 
+  /** Soft-delete list-native **1..N** `llm_ids`, atomique, 1 turn
+   *  (calque `delete_element(string[])` upstream). */
   private async mSoftDelete(p: Dict): Promise<Dict> {
     const kg = await this.getKg(p["project_id"]);
-    const llmId = p["llm_id"];
+    const llmIds: string[] = p["llm_ids"] ?? [];
     kg.transaction(() => {
       kg.advance_turn();
-      kg.soft_delete(llmId);
+      for (const id of llmIds) kg.soft_delete(id);
     });
     await saveProjectKG(this.getStore(), kg);
-    const node = kg.get_node(llmId);
     return {
-      llm_id: llmId,
+      ...idsCompact(llmIds),
       turn: kg.turn,
-      deleted_at_turn: node[DELETED_AT] ?? null,
-      note: "soft delete: node retained, queryable with include_deleted=true",
+      note: "soft delete: nodes retained, queryable with include_deleted=true",
     };
   }
 

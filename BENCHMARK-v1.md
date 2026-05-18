@@ -20,17 +20,21 @@ TS + 13 tests service qui miment le sidecar + fumée ES 8/8). Donc :
   final v1 vs `.kg.json` PoC (`v1_state_dump.mjs`). Le `verify.py`
   par-scénario (sidecar/KG_HOME-centré) est **hors périmètre v1**.
 
-> **Régime = `kg-many` (bulk) sur les DEUX stacks.** C'est la baseline
-> *livrée* de claude-in-revit (singles + `_many`/`kg_modify_where` ;
-> BENCHMARK.md « kg-many is the shipped baseline »). Le défaut produit a
-> été aligné (`mode.ts` : `(unset) → kg-many`) ET les 2 `.mcp.json`
-> forcent `KG_BENCH_MODE=kg-many` (indispensable côté PoC : la branche
-> gelée garde l'ancien défaut `kg`). Comparer en `kg` (singles) serait
-> hors-baseline. Nuance honnête : `run_live` via `--kg-dir` applique le
-> suffixe générique `SUFFIX["kg"]` (« use the kg_* tools »), pas le
-> steering « prefer the *_many bulk variants » ; les outils bulk sont
-> *disponibles* (régime livré) mais le modèle n'est pas *forcé* à les
-> préférer — symétrique sur les 2 stacks, donc comparaison équitable.
+> **Surface v1 = list-native (bulk intrinsèque) ; steering `--steer
+> kg-many` sur les DEUX stacks.** Suite au run 1, les outils KG v1 ont
+> été **fusionnés** : `kg_add_element`/`kg_modify_element`/`kg_soft_delete`
+> prennent une **liste 1..N** (un lot de 1 = l'ancien « single »),
+> atomique ; `kg_add_elements_many`/`kg_modify_elements_many` **supprimés**
+> (`kg_modify_where` conservé). Le bulk n'est plus un *mode* mais une
+> propriété de l'API (calque les commandes C# upstream `create_level
+> (List<…>)`). `mode.ts` : `kg-many` = simple alias « KG on ». Côté **PoC
+> gelé**, la surface garde le split single+`_many` (on benchmarke la
+> surface réellement livrée de chaque côté — le run 1 a déjà isolé le
+> coût substrat). `--steer kg-many` applique un suffixe **agnostique de
+> la forme** (« faire N en UN appel plutôt que boucler ») valable pour
+> v1 (liste) comme pour le PoC (`_many`) → comparaison équitable. Les 2
+> `.mcp.json` gardent `KG_BENCH_MODE=kg-many` (alias inoffensif ;
+> indispensable côté PoC dont la branche gelée garde l'ancien gate).
 
 ## Stacks
 
