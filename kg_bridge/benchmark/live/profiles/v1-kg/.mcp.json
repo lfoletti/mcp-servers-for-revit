@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "revit": {
+      "command": "node",
+      "args": [
+        "C:/Users/lauro/Documents/IT/mcp-servers-for-revit-kg-poc/server/build/index.js"
+      ],
+      "env": {
+        "KG_BENCH_MODE": "kg"
+      }
+    }
+  }
+}

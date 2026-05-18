@@ -1,0 +1,16 @@
+{
+  "_comment": "PoC baseline stack (frozen branch feat/kg-memory-poc @ 9b9f680, in a git worktree). Adjust the worktree path on the 2 absolute paths below if you place it elsewhere. Python = conda 'revitmcp' (no .venv); networkx must be installed there (pip install -r kg_bridge/requirements.txt).",
+  "mcpServers": {
+    "revit": {
+      "command": "node",
+      "args": [
+        "C:/Users/lauro/Documents/IT/poc-baseline/server/build/index.js"
+      ],
+      "env": {
+        "KG_BENCH_MODE": "kg",
+        "KG_PYTHON": "C:/Users/lauro/AppData/Local/anaconda3/envs/revitmcp/python.exe",
+        "KG_HOME": "C:/Users/lauro/Documents/IT/poc-baseline/.kg-bench-poc"
+      }
+    }
+  }
+}

@@ -6,6 +6,37 @@ Journal de bord du travail KG. Convention reprise du projet source
 
 ---
 
+## 2026-05-18 — ÉTAPE 6 : scaffolding A/B live posé (exécution = poste user, facturable)
+
+Choix utilisateur §10.6 : **A/B live complet** (Claude Code réel,
+Anthropic facturable). Le harness hérité `run_live.py` pilote `claude -p`
+par profil (`.mcp.json`) ; conçu flat-vs-kg sur 1 build → ici détourné en
+**v1 vs PoC cross-branche** (2 stacks, 2 runs `--kg-dir`, comparaison).
+
+Posé (tracké, non exécuté ici) :
+
+- `kg_bridge/benchmark/live/profiles/{v1-kg,poc-kg}/.mcp.json` — profils
+  (serveur nommé `revit` car `run_live` force `--allowedTools mcp__revit`).
+  v1 = build courant, pas de `KG_*` env (KG dans le `.rvt`, Revit+Switch).
+  poc = worktree gelé `9b9f680`, sidecar (`KG_PYTHON` conda + `KG_HOME`).
+- `compare_stacks.py` — diff cross-stack des 2 `live_results.json`
+  (tokens/turns/wall/cost, ratios v1/poc, verdict).
+- `v1_state_dump.mjs` — dump état final v1 (`kg_blob_read` socket →
+  forme `.kg.json`, log_chunks dépaquetés ≡ `assembleProjectKG`) pour la
+  parité de correction vs `.kg.json` PoC.
+- `BENCHMARK-v1.md` — protocole exact (worktree+build, approbation MCP
+  one-time, 2 runs, compare, dump, verdict, cleanup).
+
+Cadrage acté : tokens/turns/cost attendus `v1≈PoC` (surface portée 1:1) ;
+`wall_s` `v1>PoC` **attendu & accepté** (Tx ES vs `.json` — coût
+internalisation §1, pas régression agent) ; correction = parité par
+construction (60/60 TS + 13 service + fumée 8/8) + dump d'état final.
+Reset v1 = `.rvt` vierge (le harness ne sait pas vider l'ES). `verify.py`
+par-scénario = hors périmètre v1 (sidecar/KG_HOME-centré).
+
+Non commités (hors scope, apparus côté user) : `server/package-lock.json`
+modifié (`npm install`), `server/dotnet` (chemin inattendu).
+
 ## 2026-05-18 — Fumée ES VERTE 8/8 : C# étapes 3 & 5 validé en réel (Revit 2025)
 
 Première **exécution** réelle du C# ExtensibleStorage (compilé la veille,
