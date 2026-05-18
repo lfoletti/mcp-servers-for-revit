@@ -198,6 +198,12 @@ def main() -> int:
                          "<out>/snapshots/ for per-scenario verification")
     ap.add_argument("--no-reset", action="store_true",
                     help="do not wipe KG_HOME / revit-data.db before each profile")
+    ap.add_argument("--steer", choices=["flat", "kg", "kg-many"], default=None,
+                    help="override the per-prompt steering SUFFIX for ALL "
+                         "profiles (default: per-slot label). Use 'kg-many' "
+                         "to benchmark the SHIPPED claude-in-revit bulk "
+                         "policy (prefer *_many) — required for a faithful "
+                         "v1-vs-PoC A/B (étape 6, cf. BENCHMARK-v1.md).")
     ap.add_argument("--yes", action="store_true",
                     help="required: confirms you accept REAL billable API calls")
     args = ap.parse_args()
@@ -239,7 +245,8 @@ def main() -> int:
                 label, cleared or "(nothing to clear)"))
         for pf in prompts:
             scen = pf.stem
-            prompt = pf.read_text(encoding="utf-8").strip() + SUFFIX[label]
+            prompt = pf.read_text(encoding="utf-8").strip() + \
+                SUFFIX[args.steer or label]
             print("[{}] {} ...".format(label, scen), flush=True)
             m = run_one(args.claude, prof["dir"], prompt,
                         args.max_turns, args.timeout)

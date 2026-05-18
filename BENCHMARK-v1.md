@@ -67,12 +67,25 @@ cd ..\v1-kg
 claude            # idem ; /mcp doit lister les kg_* ; exit
 ```
 
+> **Run 1 (sans `--steer`) — résultat & pourquoi un run 2.** Le 1ᵉʳ A/B a
+> tourné avec le suffixe générique `SUFFIX["kg"]` (bulk *disponible* mais
+> non *forcé*). Résultat : côté v1, la latence ES (3 a/r Revit/op) a fait
+> que l'agent a **sous-persisté le seed** (1 mur au lieu de 20) → `s2`
+> timeout, scénarios suivants sur un graphe quasi-vide → **non
+> apples-to-apples**. Conclusion : il faut le **steering bulk** (= la
+> *policy livrée* de claude-in-revit : 20 murs → 1 `kg_add_elements_many`
+> → 1 Tx ES). D'où `--steer kg-many` ci-dessous, sur les **2 stacks**.
+> Garder les sorties du run 1 comme preuve (« le bulk est indispensable à
+> la viabilité de v1 ») : renommer `out\poc`→`out\poc-nosteer`,
+> `out\v1`→`out\v1-nosteer` avant le run 2.
+
 ## 1. Run PoC (pas de Revit)
 
 ```powershell
 cd C:\Users\lauro\Documents\IT\mcp-servers-for-revit-kg-poc
 python kg_bridge\benchmark\live\run_live.py `
   --kg-dir kg_bridge\benchmark\live\profiles\poc-kg `
+  --steer kg-many `
   --out   kg_bridge\benchmark\live\out\poc --yes
 ```
 
@@ -83,6 +96,7 @@ python kg_bridge\benchmark\live\run_live.py `
 2. ```powershell
    python kg_bridge\benchmark\live\run_live.py `
      --kg-dir kg_bridge\benchmark\live\profiles\v1-kg `
+     --steer kg-many `
      --out   kg_bridge\benchmark\live\out\v1 --yes
    ```
 3. **Sans fermer Revit** (état dans le `.rvt`), dump d'état final :

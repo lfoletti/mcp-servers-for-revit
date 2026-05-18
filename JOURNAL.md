@@ -6,6 +6,48 @@ Journal de bord du travail KG. Convention reprise du projet source
 
 ---
 
+## 2026-05-18 — Étape 6, run 1 (sans steering) : le bulk est INDISPENSABLE à v1
+
+Premier A/B live exécuté (poste user, Revit 2025). **Résultat clé, pas un
+verdict** : sans steering bulk, l'A/B n'est pas apples-to-apples et v1
+paraît mauvais — pour une raison méthodologique, **pas** un bug v1.
+
+| sc | v1 out/turns/wall | PoC out/turns/wall |
+|---|---|---|
+| seed | 17661/25/**351s** | 14445/21/232s |
+| s1 | 2475/5/40s | 9928/18/209s |
+| s2 | **timeout 600s** | 3702/7/81s |
+| s3 | 1613/4/30s | 5116/9/88s |
+| s4 | 7033/15/108s | 5423/8/125s |
+| s5 | 15939/14/394s | 6772/8/113s |
+| s6 | 1453/5/30s | 7306/11/176s |
+
+Dump d'état v1 (cohérent, **persistance v1 prouvée saine**) : `project_id=
+Demo`, log 1→13 sans trou ; l'agent a persisté **1 mur/1 fenêtre au lieu
+de 20/8** au seed (résumé du répétitif), `s2` a tourné en rond (murs 2→10
+absents) → timeout, scénarios suivants sur graphe quasi-vide. La latence
+ES réelle (3 a/r Revit/op) **modifie le comportement de l'agent** quand le
+bulk n'est pas forcé.
+
+**Diagnostic** : `run_live --kg-dir` applique `SUFFIX["kg"]` générique,
+**pas** `SUFFIX["kg-many"]` (« prefer the *_many bulk variants ») — le
+caveat déjà documenté. Or la *policy livrée* claude-in-revit force le
+bulk : 20 murs = 1 `kg_add_elements_many` = **1 Tx ES** au lieu de 20.
+Sans steering bulk on teste une config que personne ne livre.
+
+**Le run 1 n'est pas perdu** : il *prouve* que le bulk est la condition
+de viabilité de l'internalisation ES (le « pourquoi » de la
+bulk-variant policy).
+
+**Fix (in-scope, non facturable)** : `run_live.py` reçoit `--steer
+{flat,kg,kg-many}` (override du suffixe pour tous les profils ; défaut
+inchangé). `BENCHMARK-v1.md` impose `--steer kg-many` sur les 2 stacks
+(run 2 = vraie baseline) ; garder le run 1 comme preuve
+(`out\*-nosteer`). Re-approbation MCP non requise (les `.mcp.json` n'ont
+pas changé, seulement `run_live.py`/doc).
+
+**Prochaine étape : run 2 facturable (décision user).**
+
 ## 2026-05-18 — Fix : bulk (`kg-many`) par défaut = baseline claude-in-revit
 
 Relevé par l'utilisateur avant de lancer le bench (à raison) : v1
