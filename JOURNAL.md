@@ -6,6 +6,57 @@ Journal de bord du travail KG. Convention reprise du projet source
 
 ---
 
+## 2026-05-18 — ⚠️ DÉFAUT PERF v1 (bloquant §10.6) — hand-off session fraîche
+
+`kg_schema` a débloqué le seed **en live** (`00_seed` err=False, 13
+turns, 296 s). MAIS la suite révèle un **défaut de performance v1
+inacceptable**, pas un coût latence « attendu » :
+
+| sc | turns | wall | err | tâche |
+|---|---|---|---|---|
+| 00_seed | 13 | 296 s | ok | build (lourd, ~ok) |
+| 10_s1 | 20 | **597 s** | ok | **monter la hauteur d'1 mur** |
+| 20_s2 | — | 600 s | **TIMEOUT** | 10 edits de hauteur |
+
+**`s1` = UN edit trivial → ~10 min / 20 turns. Incompréhensible et
+inacceptable.** Ce n'est PAS le datum §10.6 ; c'est un bug de perf à
+corriger avant tout verdict. Ne plus lancer de run facturable tant que ce
+n'est pas élucidé **offline/instrumenté**.
+
+**Suspects (à profiler, par ordre de probabilité) :**
+
+1. **Coût par appel KG démultiplié.** Chaque op KG v1 = jusqu'à 3 a/r
+   socket : `kg_doc_state` (poll §5 à **chaque** `getKg`, même en
+   lecture, même si rien n'a changé) + `kg_blob_read` (cache miss) +
+   `kg_blob_write` (chaque mutation = une **Transaction Revit**).
+   `withRevitConnection` ouvre **une nouvelle socket par `sendCommand`**
+   et **sérialise tout via un mutex global**. Chaque commande = un
+   `ExternalEvent` traité par Revit à l'idle (`RaiseAndWaitForCompletion`).
+   → 1 tâche agent de N tours × 2-3 a/r × latence ExternalEvent.
+2. **`saveSnapshot` réécrit le blob ENTIER à chaque mutation**
+   (`kg_blob_write` = tout le `ProjectKG` re-sérialisé + Tx Revit) →
+   O(graphe) par edit, grossit avec le projet.
+3. **Cache froid par scénario** : chaque `claude -p` = process MCP neuf =
+   `KgService` cache vide → 1ᵉʳ op recharge tout le graphe ES.
+4. **Amplification agent** : « restate the full current project state »
+   à chaque edit (prompts s1/s2) → re-query complet par tour ; combiné à
+   des outils lents → boucle de 20 tours pour 1 edit. Symptôme, pas la
+   racine (la racine = latence par op).
+
+**Premier pas recommandé (session fraîche, NON facturable) :**
+micro-probe instrumenté — chronométrer **N `kg_blob_read`/`write`/
+`kg_doc_state` séquentiels contre Revit réel, sans Claude** (étendre
+`server/scripts/kg-es-smoke.mjs`). Ça isole « 1 op ES = 0,5 s ou 30 s ? »
+→ sépare latence-infra de l'amplification-agent. Si infra ≈ 0,5 s : le
+problème est la boucle agent / le poll §5. Si infra ≈ 10-30 s : le
+problème est ExternalEvent/socket/`saveSnapshot`. Profiler AVANT de
+toucher au code ; ne PAS re-lancer le harness facturable pour debugger.
+
+**État acquis (rappel) :** v1 fonctionnellement prouvé hors-perf
+(63/63 TS, fumée ES 8/8, repro offline 32 nodes, seed live OK). Le
+**seul** bloquant restant = cette latence par-op. §10.6 en suspens
+jusqu'à résolution.
+
 ## 2026-05-18 — `kg_schema` exposé : la découvrabilité du schéma manquait
 
 Run 2 post-fix-prompt : v1 seed re-timeout (180 s). Dump (gratuit) :
