@@ -199,6 +199,35 @@ function addOne(kg: ProjectKG, spec: Dict): string {
   return newId;
 }
 
+/**
+ * Exécute l'op d'UN élément d'un lot ; en cas d'échec, **enrichit le
+ * message** avec l'index et l'identité de l'élément fautif, puis
+ * **re-lève le même objet erreur** (type ValueError/KeyError préservé →
+ * `transaction()` rollback **total** : l'atomicité du lot est intacte).
+ * Sans ça, sur un lot de N un échec remonte un message sans index et
+ * l'agent tâtonne en aveugle (défaut relevé au run 2 étape 6). Avec ça :
+ * « add_element element[7] (node_type=Wall) failed: Missing required
+ * attrs for Wall: ['height'] » → l'agent corrige ciblé.
+ */
+function atItem<T>(
+  opLabel: string,
+  i: number,
+  ident: string,
+  fn: () => T
+): T {
+  try {
+    return fn();
+  } catch (e) {
+    if (e instanceof Error) {
+      e.message =
+        `${opLabel} element[${i}]` +
+        (ident ? ` (${ident})` : "") +
+        ` failed: ${e.message}`;
+    }
+    throw e;
+  }
+}
+
 // ----- le service ---------------------------------------------------------
 
 /** Entrée de cache : le `ProjectKG` + l'état document (§5) observé au
@@ -351,8 +380,15 @@ export class KgService {
     let edgesAdded = 0;
     kg.transaction(() => {
       kg.advance_turn();
-      for (const spec of elements) {
-        newIds.push(addOne(kg, spec));
+      for (let i = 0; i < elements.length; i++) {
+        const spec = elements[i];
+        const ident = [
+          spec["node_type"] ? `node_type=${spec["node_type"]}` : "",
+          spec["llm_id"] ? `llm_id=${spec["llm_id"]}` : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
+        newIds.push(atItem("add_element", i, ident, () => addOne(kg, spec)));
         edgesAdded += (spec["edges"] ?? []).length;
       }
     });
@@ -372,8 +408,11 @@ export class KgService {
     const ids: string[] = [];
     kg.transaction(() => {
       kg.advance_turn();
-      for (const it of edits) {
-        kg.modify_node(it["llm_id"], it["updates"]);
+      for (let i = 0; i < edits.length; i++) {
+        const it = edits[i];
+        atItem("modify_element", i, `llm_id=${it["llm_id"]}`, () =>
+          kg.modify_node(it["llm_id"], it["updates"])
+        );
         ids.push(it["llm_id"]);
       }
     });
@@ -410,7 +449,10 @@ export class KgService {
     const llmIds: string[] = p["llm_ids"] ?? [];
     kg.transaction(() => {
       kg.advance_turn();
-      for (const id of llmIds) kg.soft_delete(id);
+      for (let i = 0; i < llmIds.length; i++) {
+        const id = llmIds[i];
+        atItem("soft_delete", i, `llm_id=${id}`, () => kg.soft_delete(id));
+      }
     });
     await saveProjectKG(this.getStore(), kg);
     return {

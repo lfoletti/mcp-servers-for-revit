@@ -6,6 +6,38 @@ Journal de bord du travail KG. Convention reprise du projet source
 
 ---
 
+## 2026-05-18 — Étape 6 run 2 (steered) : seed timeout → fix erreurs de lot lisibles
+
+Run 2 v1 (merge + `--steer kg-many`) : seed **timeout 600 s** à nouveau.
+Dump : `turn=1`, 3 nodes **en 1 appel** (`kg_add_element([N0,N1,GEN_200])`)
+→ l'agent **batche bien**. Puis **0** jusqu'au kill : le lot suivant
+(20 murs/8 fenêtres) échoue à chaque tentative, rollback atomique → rien,
+l'agent tâtonne en aveugle. Préconditions OK (vierge, Switch, pas de
+dialogue ; 3 nodes persistés prouvent le chemin Revit/ES).
+
+**Défaut révélé par le merge (pas un bug) :** un outil atomique de lot
+doit rendre l'échec **lisible par élément**. Avant, l'erreur core
+remontait sans index → sur un lot de N, l'agent ne sait pas QUOI
+corriger. (Outils single du run 1 : retour par élément → l'agent créait
+wall_001 OK.)
+
+**Fixes (non facturables, 63/63 vert, `core/`/`persist.ts` intacts) :**
+
+1. `service.ts` : helper `atItem(opLabel,i,ident,fn)` autour de chaque
+   élément des mutateurs list-native — enrichit le message
+   (`add_element element[7] (node_type=Wall) failed: Missing required
+   attrs for Wall: ['height']`) et **re-lève le même objet** (type
+   préservé → `transaction()` rollback **total** : atomicité intacte).
+   Nouveau test verrouille index+identité.
+2. `run_live.py` `SUFFIX["kg-many"]` : « FEW bulk calls, many per call,
+   **dependency-ordered** (levels/types → walls → windows), never one
+   call per element » au lieu de « ONE call » (le méga-appel monolithique
+   est impossible : les fenêtres référencent des murs aux ids
+   auto-alloués). Agnostique de la forme (vaut v1 liste & PoC `_many`).
+
+Run 2 à refaire avec ces fixes (facturable, décision user). Build v1
+déjà rebuildé ; `.mcp.json` inchangés (pas de ré-approbation).
+
 ## 2026-05-18 — Fusion single/`_many` : outils KG list-native (défaut de conception corrigé)
 
 Relevé par l'utilisateur : les commandes C# upstream sont **list-native

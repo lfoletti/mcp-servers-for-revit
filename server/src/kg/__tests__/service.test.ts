@@ -230,6 +230,40 @@ test("a failed item rolls the WHOLE batch back (all-or-nothing)", async () => {
   assert.equal((await svc.call("stats", { project_id: PID })).turn, 0);
 });
 
+test("batch failure names the offending element (index + identity), atomic", async () => {
+  const { svc } = make();
+  await assert.rejects(
+    () =>
+      svc.call("add_element", {
+        project_id: PID,
+        elements: [
+          { node_type: "Level", attrs: { name: "ok", elevation: 0 } },
+          { node_type: "Wall", attrs: { name: "bad" } }, // attrs Wall manquants
+        ],
+      }),
+    (e: any) =>
+      /add_element element\[1\] \(node_type=Wall\) failed: /.test(
+        e.message
+      ) && /required/i.test(e.message)
+  );
+  // atomicité préservée : le lot entier rollback, rien ne persiste.
+  assert.equal((await svc.call("query", { project_id: PID })).count, 0);
+
+  // modify_element : même contexte par-élément.
+  const id = await add1(svc, {
+    node_type: "Level",
+    attrs: { name: "N", elevation: 0 },
+  });
+  await assert.rejects(
+    () =>
+      svc.call("modify_element", {
+        project_id: PID,
+        edits: [{ llm_id: id, updates: { nope: 1 } }],
+      }),
+    (e: any) => /modify_element element\[0\] \(llm_id=/.test(e.message)
+  );
+});
+
 test("modify_where filters by predicates and mutates atomically", async () => {
   const { svc } = make();
   await svc.call("add_element", {

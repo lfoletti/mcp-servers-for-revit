@@ -42,9 +42,11 @@ HERE = Path(__file__).resolve().parent
 SUFFIX = {
     "flat": " (Use the store_* data tools to persist and query project state.)",
     "kg": " (Use the kg_* tools to record and query project state.)",
-    "kg-many": " (Use the kg_* tools to record and query project state; "
-               "when acting on multiple elements, do it in ONE call with "
-               "many elements rather than looping per element.)",
+    "kg-many": " (Use the kg_* tools to record and query project state. "
+               "Persist in a FEW bulk calls — many elements per call, "
+               "ordered by dependency (e.g. levels & types first, then "
+               "walls, then windows that reference those walls) — never "
+               "one call per element.)",
 }
 
 # Pairs to report ratios for, when both profiles are present.
