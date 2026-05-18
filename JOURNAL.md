@@ -6,6 +6,62 @@ Journal de bord du travail KG. Convention reprise du projet source
 
 ---
 
+## 2026-05-18 — ÉTAPE 5 terminée : protocole de cohérence cache↔`.rvt` (§5)
+
+**Chemin spec §10.5 bouclé.** Le cache serveur ne peut plus mentir
+silencieusement : un changement hors-bande du `.rvt` (édition humaine,
+ouverture/bascule de document, Sync-to-Central) le force à recharger
+depuis l'ES. Suite TS **60/60** (25 core + 19 persist + **16 service**,
+dont 3 d'invalidation), build prod `tsc` vert.
+
+**Décision tranchée (fork d'archi — pas de canal push).** Le socket est
+requête→réponse : **aucun** push Revit→serveur. Plutôt que toucher au
+plugin (`IExternalApplication`), on reste self-contained dans le
+commandset (cohérent étapes 3–4) : un **epoch monotone** + identité
+document, *sondés* à coût quasi nul par le serveur (commande
+`kg_doc_state`, sans Tx) au début de chaque op KG. C'est la ligne « Cache
+longue durée + signal d'invalidation » du tableau §5, le signal étant
+sondé, pas poussé (1 a/r léger/op ; reload ES seulement si epoch/doc a
+bougé → on garde « cache longue durée pour les écritures-outils »).
+
+**Côté C# (build Revit requis — pas de SDK ici, comme étapes 3–4).**
+
+- `commandset/Services/KnowledgeGraph/KgDocumentWatcher.cs` — static,
+  souscription **lazy/idempotente** (depuis les handlers KG ; pas
+  d'`IExternalApplication` à ajouter) à `DocumentChanged`/`DocumentOpened`/
+  `DocumentSynchronizingWithCentral`. **Filtre clé** : un `DocumentChanged`
+  dont *toutes* les Tx == `KgExtensibleStorage.WriteTransactionName`
+  (constante désormais **publique partagée** — source unique, le filtre ne
+  peut pas dériver) **n'incrémente pas** l'epoch ⇒ nos propres écritures
+  ES n'invalident pas le cache. Capture deleted/added/modified ids
+  (fenêtre bornée 10k/cat., par epoch) = **base `kg_detect_drift`**.
+  Handlers d'événements sous try/catch (ne jamais lever dans Revit).
+- `KgDocStateCommand.cs` / `KgDocStateEventHandler.cs` (moule, sans Tx) ;
+  DTOs `KgDocStateParams`/`KgDocStateResult` (clés snake_case) ;
+  `kg_doc_state` enregistré dans `command.json` ; `EnsureSubscribed`
+  appelé aussi en tête des handlers blob read/write.
+
+**Côté TS.** `transport.ts` : `KgDocStateProvider` (+ `SocketKgDocStateProvider`
+réel, `NoopKgDocStateProvider` hors-ligne, factory lazy). `service.ts` :
+cache devenu `{kg, docKey, epoch}` ; `getKg` sonde le provider →
+`docKey`/`epoch` inchangés ⇒ cache gardé, sinon reload `loadProjectKG`.
+Provider injectable ; défaut = Noop si un store est injecté (les 13 tests
+existants **inchangés**, hors Revit), socket lazy en prod. 3 tests §5
+(cache « périmé » stable, reload sur epoch++, reload sur docKey changé)
+via un provider factice — zéro Revit.
+
+**Différé explicite (§2 / Stage 2).** Basculer `deleted_at_turn` + tenir
+la `Map<ElementId,llm_id>` sur les ids supprimés = refactor identité §2 ;
+étape 5 ne fait que **câbler + exposer le signal**. Le drift n'est pas
+encore consommé (`kg_detect_drift` = Stage 2).
+
+**Prochaine session — ÉTAPE 6 (spec §10.6).** Re-bench v1 vs PoC sur le
+harness hérité `kg_bridge/benchmark/` (prouver v1 ≥ PoC). Nécessite une
+session Revit + le build C# du commandset (les commandes `kg_blob_*` /
+`kg_doc_state` ne sont vérifiables qu'en env Revit). Après étape 6 :
+suppression possible de `kg_bridge/{vendor,benchmark}/` (cf. décision
+étape 4).
+
 ## 2026-05-18 — ÉTAPE 4 terminée : `kg_*.ts` rebranchés sur `core/`, sidecar supprimé
 
 **Chemin spec §10.4 bouclé.** Le sidecar Python ne tourne plus nulle part :

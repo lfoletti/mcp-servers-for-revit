@@ -10,6 +10,17 @@ import assert from "node:assert/strict";
 
 import { KgService } from "../service.js";
 import { BlobKgPersistence, InMemoryBlobTransport } from "../persist.js";
+import type { KgDocStateProvider } from "../transport.js";
+
+/** Provider §5 pilotable : simule ouverture/bascule de document (docKey)
+ *  et changement hors-bande / Sync (epoch) sans Revit. */
+class FakeDocState implements KgDocStateProvider {
+  epoch = 0;
+  docKey = "doc-A";
+  async getState() {
+    return { epoch: this.epoch, docKey: this.docKey };
+  }
+}
 
 /** Service neuf + le store qu'il utilise (réutilisable pour tester le
  *  reload depuis l'ES via un SECOND service au cache vide). */
@@ -279,6 +290,72 @@ test("reset clears cache and zeroes the persisted graph", async () => {
 test("unknown method rejects", async () => {
   const { svc } = make();
   await assert.rejects(() => svc.call("nope", {}), /unknown method: nope/);
+});
+
+// ----- cohérence cache↔.rvt (§5, étape 5) ---------------------------------
+
+test("stable epoch ⇒ long-lived cache (does not reload mid-session)", async () => {
+  const store = new BlobKgPersistence(new InMemoryBlobTransport());
+  const fake = new FakeDocState();
+  const a = new KgService(store, fake);
+
+  await a.call("add_element", {
+    project_id: PID,
+    node_type: "Level",
+    attrs: { name: "N00", elevation: 0 },
+  });
+  // Un AUTRE writer persiste un 2ᵉ node dans le MÊME store (= édition
+  // hors-bande du blob ES), mais l'epoch ne bouge pas.
+  const b = new KgService(store, new FakeDocState());
+  await b.call("add_element", {
+    project_id: PID,
+    node_type: "Level",
+    attrs: { name: "N01", elevation: 3 },
+  });
+  // `a` garde son cache (epoch/doc inchangés) ⇒ lecture « périmée ».
+  assert.equal((await a.call("query", { project_id: PID })).count, 1);
+});
+
+test("epoch bump (out-of-band / Sync) ⇒ reload from ES", async () => {
+  const store = new BlobKgPersistence(new InMemoryBlobTransport());
+  const fake = new FakeDocState();
+  const a = new KgService(store, fake);
+
+  await a.call("add_element", {
+    project_id: PID,
+    node_type: "Level",
+    attrs: { name: "N00", elevation: 0 },
+  });
+  const b = new KgService(store, new FakeDocState());
+  await b.call("add_element", {
+    project_id: PID,
+    node_type: "Level",
+    attrs: { name: "N01", elevation: 3 },
+  });
+
+  fake.epoch += 1; // signal : le .rvt a changé sous nous
+  assert.equal((await a.call("query", { project_id: PID })).count, 2);
+});
+
+test("docKey change (document opened/switched) ⇒ reload from ES", async () => {
+  const store = new BlobKgPersistence(new InMemoryBlobTransport());
+  const fake = new FakeDocState();
+  const a = new KgService(store, fake);
+
+  await a.call("add_element", {
+    project_id: PID,
+    node_type: "Level",
+    attrs: { name: "N00", elevation: 0 },
+  });
+  const b = new KgService(store, new FakeDocState());
+  await b.call("add_element", {
+    project_id: PID,
+    node_type: "Level",
+    attrs: { name: "N01", elevation: 3 },
+  });
+
+  fake.docKey = "doc-B"; // un autre document a été ouvert
+  assert.equal((await a.call("query", { project_id: PID })).count, 2);
 });
 
 test("calls are serialized (no interleaving corrupts the graph)", async () => {

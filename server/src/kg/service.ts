@@ -38,7 +38,12 @@ import {
   loadProjectKG,
   saveProjectKG,
 } from "./persist.js";
-import { defaultKgStore } from "./transport.js";
+import {
+  KgDocStateProvider,
+  NoopKgDocStateProvider,
+  defaultKgDocStateProvider,
+  defaultKgStore,
+} from "./transport.js";
 
 type Dict = Record<string, any>;
 
@@ -187,33 +192,76 @@ function addOne(kg: ProjectKG, spec: Dict): string {
 
 // ----- le service ---------------------------------------------------------
 
+/** Entrée de cache : le `ProjectKG` + l'état document (§5) observé au
+ *  moment du (re)chargement. Reload si `docKey`/`epoch` ont bougé. */
+interface CacheEntry {
+  kg: ProjectKG;
+  docKey: string;
+  epoch: number;
+}
+
 export class KgService {
   private store: KgSnapshotStore | null;
-  private instances = new Map<string, ProjectKG>();
+  private docState: KgDocStateProvider | null;
+  private readonly storeInjected: boolean;
+  private instances = new Map<string, CacheEntry>();
   /** Sérialise tous les `call()` (parité stdin-série du sidecar + le
    *  snapshot/rollback de `transaction()` n'est pas réentrant). */
   private queue: Promise<unknown> = Promise.resolve();
 
-  /** `store` injectable pour les tests (InMemoryBlobTransport) ; en prod,
-   *  résolu **lazy** sur le store socket (aucun socket à l'import). */
-  constructor(store?: KgSnapshotStore) {
+  /**
+   * `store` / `docState` injectables pour les tests (InMemoryBlobTransport,
+   * provider factice). En prod (aucun arg) : store + provider socket
+   * **lazy** (aucun socket à l'import). Si un store est injecté SANS
+   * provider (tests/dev hors Revit), le provider par défaut est `Noop`
+   * (epoch/doc constants ⇒ pas d'invalidation : comportement d'avant §5).
+   */
+  constructor(store?: KgSnapshotStore, docState?: KgDocStateProvider) {
     this.store = store ?? null;
+    this.storeInjected = store !== undefined;
+    this.docState = docState ?? null;
   }
 
   private getStore(): KgSnapshotStore {
     return (this.store ??= defaultKgStore());
   }
 
-  /** Cache → reload depuis l'ES → neuf. `persist_path=null` : le
-   *  `persist()` interne de `transaction()` est un no-op (on persiste via
-   *  le store, pas un fichier). Pendant du `_kg()` du sidecar. */
+  private getDocState(): KgDocStateProvider {
+    if (this.docState !== null) return this.docState;
+    this.docState = this.storeInjected
+      ? new NoopKgDocStateProvider()
+      : defaultKgDocStateProvider();
+    return this.docState;
+  }
+
+  /**
+   * Cache (= cache du blob ES, §5) → invalidation sur signal → reload.
+   * Sonde `kg_doc_state` (coût quasi nul, sans Tx) : `docKey`/`epoch`
+   * inchangés ⇒ on garde le cache (« cache longue durée pour les
+   * écritures-outils ») ; document ouvert/basculé ou changement hors-bande
+   * (humain, Sync) ⇒ on recharge depuis l'ES. Nos propres écritures ES ne
+   * bumpent PAS l'epoch (filtre par nom de Tx côté C#,
+   * `KgDocumentWatcher`). `persist_path=null` : le `persist()` interne de
+   * `transaction()` est un no-op (on persiste via le store).
+   */
   private async getKg(projectId?: string): Promise<ProjectKG> {
     const pid = projectId || "default";
+    const state = await this.getDocState().getState();
     const cached = this.instances.get(pid);
-    if (cached) return cached;
+    if (
+      cached &&
+      cached.docKey === state.docKey &&
+      cached.epoch === state.epoch
+    ) {
+      return cached.kg;
+    }
     const loaded = await loadProjectKG(this.getStore(), pid, null);
     const kg = loaded ?? new ProjectKG(pid);
-    this.instances.set(pid, kg);
+    this.instances.set(pid, {
+      kg,
+      docKey: state.docKey,
+      epoch: state.epoch,
+    });
     return kg;
   }
 
@@ -496,13 +544,11 @@ export class KgService {
   private async mReset(p: Dict): Promise<Dict> {
     const pid = (p["project_id"] || "default") as string;
     const existedInCache = this.instances.has(pid);
-    this.instances.delete(pid);
+    this.instances.delete(pid); // prochain getKg ⇒ reload (graphe vide)
     // L'ES n'a pas de « delete DataStorage » dans le contrat ; on écrase
     // par un graphe vide (recreate-if-missing ⇒ vide == reset). Démo only.
     const before = await loadProjectKG(this.getStore(), pid, null);
-    const fresh = new ProjectKG(pid);
-    await saveProjectKG(this.getStore(), fresh);
-    this.instances.set(pid, fresh);
+    await saveProjectKG(this.getStore(), new ProjectKG(pid));
     return { project_id: pid, removed: before !== null || existedInCache };
   }
 }

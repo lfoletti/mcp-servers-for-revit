@@ -96,3 +96,58 @@ export function defaultKgStore(): KgSnapshotStore {
   }
   return _defaultStore;
 }
+
+// ----- signal de cohérence cache↔.rvt (§5, §10.5) -------------------------
+
+/** État minimal dont le service a besoin pour invalider son cache : un
+ *  epoch monotone + l'identité document. Le drift (ids supprimés/ajoutés)
+ *  renvoyé par `kg_doc_state` n'est PAS consommé à l'étape 5 (base de
+ *  `kg_detect_drift`, Stage 2) — d'où une vue réduite ici. */
+export interface KgDocState {
+  epoch: number;
+  docKey: string;
+}
+
+export interface KgDocStateProvider {
+  getState(): Promise<KgDocState>;
+}
+
+interface KgDocStatePayload {
+  epoch?: number;
+  doc_key?: string;
+}
+
+/**
+ * Source réelle du signal : commande C# `kg_doc_state` (sans Tx). Sondée
+ * par le service au début de chaque op KG ; epoch/doc inchangés ⇒ le cache
+ * tient (« cache longue durée », §5), changés ⇒ reload depuis l'ES.
+ */
+export class SocketKgDocStateProvider implements KgDocStateProvider {
+  async getState(): Promise<KgDocState> {
+    const res = await withRevitConnection((c) =>
+      c.sendCommand("kg_doc_state", { since_epoch: 0 })
+    );
+    const p = unwrapAiResult<KgDocStatePayload>(res, "kg_doc_state");
+    return {
+      epoch: p?.epoch ?? 0,
+      docKey: p?.doc_key ?? "",
+    };
+  }
+}
+
+/** Provider « hors-ligne » : epoch/doc constants ⇒ le cache ne s'invalide
+ *  jamais (comportement d'avant l'étape 5). Défaut quand un store est
+ *  injecté sans provider (tests/dev sans Revit). */
+export class NoopKgDocStateProvider implements KgDocStateProvider {
+  async getState(): Promise<KgDocState> {
+    return { epoch: 0, docKey: "" };
+  }
+}
+
+let _defaultDocState: KgDocStateProvider | null = null;
+export function defaultKgDocStateProvider(): KgDocStateProvider {
+  if (_defaultDocState === null) {
+    _defaultDocState = new SocketKgDocStateProvider();
+  }
+  return _defaultDocState;
+}

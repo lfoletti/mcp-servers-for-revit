@@ -132,6 +132,11 @@
       "commandName": "kg_blob_write",
       "description": "Write the project Knowledge Graph blob into the .rvt ExtensibleStorage within a Revit Transaction (recreate-if-missing)",
       "assemblyPath": "RevitMCPCommandSet.dll"
+    },
+    {
+      "commandName": "kg_doc_state",
+      "description": "Return the document change epoch + identity (and recent drift element ids) so the MCP server can invalidate/reload its KG cache (no Transaction)",
+      "assemblyPath": "RevitMCPCommandSet.dll"
     }
   ]
 }

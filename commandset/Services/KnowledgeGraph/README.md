@@ -14,17 +14,25 @@ document. Spec : `../../../DESIGN-internalize-es.md` §4, §5, §6.
   `AIResult<T>`. Tournent sur le thread API Revit (obligatoire même en
   lecture).
 
-Étape 5 (spec §10.5) — **à faire** :
+Étape 5 (spec §10.5) — **fait** :
 
-- **`DocumentChanged`** — sur `GetDeletedElementIds()` : basculer
-  `deleted_at_turn` du node lié + retirer l'entrée de la
-  `Map<ElementId,llm_id>` (un id recyclé ne doit pas re-résoudre vers le
-  tombstone). Sur `GetAddedElementIds()` : élément neuf (clé absente de la
-  Map) ⇒ non lié. C'est aussi la base de `kg_detect_drift` (Stage 2).
-- **`DocumentOpened` / `DocumentSynchronizingWithCentral`** — signal
-  d'invalidation/reload du cache serveur (cohérence cache↔`.rvt`, §5 ;
-  fréquence accrue en worksharing, §6).
+- **`KgDocumentWatcher.cs`** — souscrit (lazy/idempotent, depuis les
+  handlers KG) à `DocumentChanged` / `DocumentOpened` /
+  `DocumentSynchronizingWithCentral`. Maintient un **epoch monotone** +
+  l'identité document, exposés par la commande `kg_doc_state` (sans Tx) :
+  le serveur sonde, garde son cache si inchangé (« cache longue durée »,
+  §5), recharge depuis l'ES sinon. Filtre clé : un `DocumentChanged` dont
+  toutes les Tx sont `KgExtensibleStorage.WriteTransactionName` (nos
+  propres écritures ES) **n'incrémente pas** l'epoch (sinon perte du cache
+  à chaque op). Capture aussi les ids supprimés/ajoutés/modifiés (fenêtre
+  bornée, par epoch) = **base de `kg_detect_drift`** (Stage 2).
+- **`KgDocStateEventHandler.cs`** — moule `*EventHandler`, sans Tx.
 
-**Statut : étape 3 implémentée (build Revit requis pour vérifier — pas
-de SDK Revit dans cet env, comme toutes les commandes C#). Handlers
-document `DocumentChanged`/`Opened`/`Sync` = étape 5, non implémentés.**
+**Différé (§2 / Stage 2, hors périmètre v1).** Basculer `deleted_at_turn`
+du node lié + maintenir la `Map<ElementId,llm_id>` sur
+`GetDeletedElementIds()` : c'est le refactor identité/liaison §2. Étape 5
+ne fait que **câbler le signal** (et l'expose) ; `kg_detect_drift`
+consommera le drift plus tard.
+
+**Statut : étapes 3 & 5 implémentées (build Revit requis pour vérifier —
+pas de SDK Revit dans cet env, comme toutes les commandes C#).**

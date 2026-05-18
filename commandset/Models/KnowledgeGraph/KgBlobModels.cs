@@ -63,4 +63,43 @@ namespace RevitMCPCommandSet.Models.KnowledgeGraph
         [JsonProperty("created_data_storage")]
         public bool CreatedDataStorage { get; set; }
     }
+
+    /// <summary>Paramètres de <c>kg_doc_state</c>.</summary>
+    public class KgDocStateParams
+    {
+        /// <summary>Ne renvoyer le drift que pour <c>epoch &gt; since_epoch</c>
+        /// (0 ⇒ tout le buffer retenu). Le serveur passe le dernier epoch
+        /// qu'il a vu.</summary>
+        [JsonProperty("since_epoch")]
+        public long SinceEpoch { get; set; }
+    }
+
+    /// <summary>
+    /// Charge utile de <c>kg_doc_state</c> (DESIGN-internalize-es.md §5,
+    /// §10.5). <c>epoch</c> monotone + identité document = signal
+    /// d'invalidation du cache serveur ; les *_ids sont la **base de
+    /// `kg_detect_drift`** (Stage 2, non consommée à l'étape 5).
+    /// </summary>
+    public class KgDocStateResult
+    {
+        [JsonProperty("epoch")]
+        public long Epoch { get; set; }
+
+        /// <summary>Identité stable du document (PathName, sinon Title) :
+        /// un changement ⇒ document ouvert/basculé ⇒ reload.</summary>
+        [JsonProperty("doc_key")]
+        public string DocKey { get; set; } = string.Empty;
+
+        [JsonProperty("doc_title")]
+        public string DocTitle { get; set; } = string.Empty;
+
+        [JsonProperty("deleted_ids")]
+        public List<long> DeletedIds { get; set; } = new List<long>();
+
+        [JsonProperty("added_ids")]
+        public List<long> AddedIds { get; set; } = new List<long>();
+
+        [JsonProperty("modified_ids")]
+        public List<long> ModifiedIds { get; set; } = new List<long>();
+    }
 }

@@ -39,6 +39,9 @@ namespace RevitMCPCommandSet.Services.KnowledgeGraph
         {
             try
             {
+                // Démarre la surveillance §5 dès la 1ʳᵉ op KG (idempotent).
+                KgDocumentWatcher.EnsureSubscribed(app?.Application);
+
                 Document doc = app.ActiveUIDocument?.Document;
                 if (doc == null)
                     throw new InvalidOperationException(

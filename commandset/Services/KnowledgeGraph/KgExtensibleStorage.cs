@@ -40,6 +40,15 @@ namespace RevitMCPCommandSet.Services.KnowledgeGraph
         private const string SchemaName = "RevitMcpKnowledgeGraph";
         private const string VendorId = "MCPSERVERSFORREVIT";
 
+        /// <summary>
+        /// Nom de la `Transaction` d'écriture KG. **Public et partagé** :
+        /// `KgDocumentWatcher` filtre les `DocumentChanged` portant ce nom
+        /// pour ne PAS invalider le cache serveur sur nos propres écritures
+        /// ES (§5, « cache longue durée pour les écritures-outils »). Une
+        /// seule source pour ce littéral → le filtre ne peut pas dériver.
+        /// </summary>
+        public const string WriteTransactionName = "KG blob write";
+
         // Noms de Field — identifiants ES (lettre/chiffre/underscore, pas de
         // chiffre en tête). Figés : ils font partie du schéma diffusé.
         private const string FieldGraph = "graph";
@@ -133,7 +142,7 @@ namespace RevitMCPCommandSet.Services.KnowledgeGraph
             Schema schema = GetOrCreateSchema();
             bool created = false;
 
-            using (var tx = new Transaction(doc, "KG blob write"))
+            using (var tx = new Transaction(doc, WriteTransactionName))
             {
                 tx.Start();
 
