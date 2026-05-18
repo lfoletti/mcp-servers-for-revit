@@ -2,6 +2,7 @@
 # Node.js / TypeScript (server/)
 # =============================================================================
 server/build/
+server/build-test/
 server/node_modules/
 server/revit-data.db
 

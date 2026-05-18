@@ -6,6 +6,55 @@ Journal de bord du travail KG. Convention reprise du projet source
 
 ---
 
+## 2026-05-18 — ÉTAPE 1 terminée : port TS de `ProjectKG` + suite verte
+
+**Chemin critique (spec §10.1) bouclé.** `kg_bridge/vendor/project_kg.py`
+porté en TypeScript dans `server/src/kg/core/`, suite portée **1:1** dans
+`server/src/kg/core/__tests__/` : **25/25 verts, iso-comportement** vs le
+Python de référence.
+
+**Sources & vérifs.**
+
+- Référence figée confirmée **byte-for-byte** : SHA256 de
+  `kg_bridge/vendor/project_kg.py` == upstream
+  `claude-in-revit/.../lib/project_kg.py` (identique).
+- Le « 821 » de la spec = total de la suite upstream *entière*. **Le**
+  fichier qui couvre `project_kg.py` est `claude-in-revit/tests/`
+  `test_project_kg.py` (25 tests) → porté 1:1. `kg_sync.py` /
+  `test_kg_sync.py` = binding Revit, **hors scope** (exclu par le docstring
+  du module Python lui-même). Périmètre étape 1 = ce fichier, vert à 100 %.
+
+**Décisions d'implémentation (forks de la spec/README tranchés).**
+
+- **Graphe** : adjacence maison (`graph.ts`), **pas** `graphology` —
+  zéro dépendance, contrôle exact de l'ordre d'insertion + clonage plat.
+- **Runner** : `node:test` intégré, **zéro dépendance** ;
+  `tsconfig.test.json` (build isolé `build-test/`) + `npm test`. Le
+  `tsconfig.json` de prod exclut désormais `__tests__` (pas dans le paquet
+  npm). `clean` purge aussi `build-test`.
+- **API** : surface en **noms Python** (snake_case, `to_dict`/`from_dict`/
+  `transaction`, props `turn`/`action_log`) pour un portage de tests
+  mécanique et minimiser la dérive silencieuse (spec §7).
+
+**Pièges §7 traités (documentés inline).** Ordre `find_by_type` =
+ordre d'insertion (`graph.ts`) ; rollback `transaction()` via
+`structuredClone(to_dict())` ≡ `copy.deepcopy` + `from_dict`
+(`project-kg.ts`) ; sérialisation `pyJsonDump` ≡
+`json.dump(sort_keys=True, indent=2, ensure_ascii=True)` (`pyjson.ts`),
+avec la **delta connue et acceptée `1.0`→`1`** (JS ne distingue pas
+int/float ; `JSON.parse` relit de toute façon `1.0` comme `1` ; aucun test
+n'asserte les octets bruts — round-trip sémantique seul).
+
+**Env.** Node introuvable au PATH système ; build/tests lancés via le
+node de l'env conda `revitmcp`
+(`C:\Users\lauro\AppData\Local\anaconda3\envs\revitmcp`, Node v25.8.2).
+
+**Prochaine session — ÉTAPE 2 (spec §10.2).** Implémenter le contrat
+`server/src/kg/persist.ts` (interface déjà posée : `LiveGraphBlob` /
+`LogChunks` / `KgPersistence`) au-dessus de `core/`, agnostique du
+transport. Rien d'autre n'était bloquant : étape 1 verte débloque tout
+le reste du plan.
+
 ## 2026-05-18 — Session conception v1 (internalisation ES, suppression du sidecar)
 
 **Contexte.** Branche PoC `feat/kg-memory-poc` gelée à `9b9f680`

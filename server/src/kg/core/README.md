@@ -11,8 +11,22 @@ Cœur du KG v1 : portage **TypeScript** de
   `_next_llm_id` conservé) ; `ElementId` = liaison seule, via une
   `Map<ElementId, llm_id>` globale (cf. spec §2). **Pas** d'ancre par
   élément.
-- **Graphe** : `graphology` (multigraphe) ou adjacence maison ; préserver
-  l'ordre d'insertion (sémantique de `find_by_type`).
-- **Transactions** : `structuredClone()` pour le snapshot/restore.
+- **Graphe** : adjacence maison (`graph.ts`, zéro dépendance) ; ordre
+  d'insertion préservé (sémantique de `find_by_type`).
+- **Transactions** : `structuredClone(to_dict())` pour le snapshot/restore.
 
-**Statut : non encore porté.** Étape 1 du plan d'implémentation (spec §10).
+## Modules
+
+| Fichier | Rôle |
+|---|---|
+| `project-kg.ts` | `ProjectKG` (port 1:1 ; API en noms Python pour minimiser la dérive) |
+| `graph.ts` | `MultiDiGraph` maison — sous-ensemble networkx réellement utilisé |
+| `schema.ts` | `NODE_TYPES` / `SESSION_NODE_TYPES` / `EDGE_TYPES` + constantes |
+| `errors.ts` | `ValueError` / `KeyError` (pendants des exceptions Python) |
+| `pyjson.ts` | `pyJsonDump` ≡ `json.dump(sort_keys, indent=2)` + `pyInt`/`pyStr` |
+| `index.ts` | barrel — surface consommée par les `kg_*.ts` (étape 4) |
+
+**Statut : porté, suite verte (25/25 iso-comportement vs le Python).**
+Étape 1 du plan (spec §10) **terminée**. Reste pièges documentés inline :
+ordre `find_by_type` (`graph.ts`), rollback `transaction()` (`project-kg.ts`),
+sérialisation + delta connue `1.0`→`1` (`pyjson.ts`).

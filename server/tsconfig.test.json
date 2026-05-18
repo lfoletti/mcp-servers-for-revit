@@ -1,0 +1,14 @@
+{
+  // Build des tests `core/__tests__` (chemin critique, spec §10 étape 1).
+  // Le tsconfig de prod EXCLUT `__tests__` (les tests ne partent pas dans le
+  // paquet npm, `files: ["build"]`). Ici on les ré-inclut et on émet dans un
+  // `build-test/` séparé, lancé ensuite par `node --test` (zéro dépendance).
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./build-test"
+  },
+  // Cœur KG seul : self-contained (que des builtins Node), build rapide,
+  // isolé du reste de `src/` (les tools se rebrancheront étape 4).
+  "include": ["src/kg/core/**/*"],
+  "exclude": ["node_modules"]
+}
