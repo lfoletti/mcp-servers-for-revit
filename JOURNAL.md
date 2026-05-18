@@ -6,6 +6,119 @@ Journal de bord du travail KG. Convention reprise du projet source
 
 ---
 
+## 2026-05-18 — ÉTAPE 3 terminée : commandes C# `kg_blob_read` / `kg_blob_write` (ES)
+
+**Chemin spec §10.3 bouclé.** Premières — et seules — lignes
+d'ExtensibleStorage du repo (aucune n'existait : `grep ExtensibleStorage`
+ne trouvait que doc/spec). Écrites sur le **moule exact** de
+`CreateLevelCommand` (commande → `ExternalEventCommandBase` →
+`IExternalEventHandler`+`IWaitableExternalEventHandler` → `AIResult<T>`).
+
+**Fichiers (auto-inclus, csproj SDK-style — rien à éditer côté .csproj).**
+
+- `commandset/Services/KnowledgeGraph/KgExtensibleStorage.cs` — **source
+  unique** des spécificités ES (faits §3 vérifiés, encodés inline) :
+  schéma **GUID constant à vie** (le changer orpheline les blobs des
+  `.rvt` existants), `AccessLevel.Public` r/w + VendorId, 3 Field
+  (`graph` string, `log_chunks` Array<string>, `log_schema_version` int —
+  **aucun flottant/XYZ → aucune unité**), find-or-create de l'**unique**
+  `DataStorage` globale via `ExtensibleStorageFilter`, `Read` **sans Tx**
+  / `Write` **en `Transaction`** (atomicité Stage 2 « gratuite », §1) +
+  recreate-if-missing (§4).
+- `…/KgBlobReadEventHandler.cs` / `…/KgBlobWriteEventHandler.cs` (moule
+  `CreateLevelEventHandler` ; le read tourne quand même sur le thread API
+  Revit via l'ExternalEvent — obligatoire même en lecture).
+- `commandset/Commands/KnowledgeGraph/KgBlobReadCommand.cs` /
+  `KgBlobWriteCommand.cs` (`CommandName` = `kg_blob_read` /
+  `kg_blob_write`).
+- `commandset/Models/KnowledgeGraph/KgBlobModels.cs` — DTOs aux clés JSON
+  **figées snake_case** via `[JsonProperty]` (matchent **1:1** le
+  `KgBlobRecord` TS de `persist.ts`, indépendamment du casing du
+  sérialiseur).
+- `command.json` : `kg_blob_read` + `kg_blob_write` enregistrés (dispatch
+  = clé `commandName` → assembly).
+
+**Décisions tranchées.** C# = **coffre à blob « bête »**, toute la
+politique (chunking 16 Mo, schéma, compaction, versioning) reste côté TS
+(`persist.ts`, étape 2) → ES non typé sur les attrs KG (NODE_TYPES évolue,
+schéma ES figé une fois diffusé, §3). `projectId` **pas** un champ ES : il
+vit déjà dans `graph` (`data.project_id`) et le garde-fou est côté TS
+(`assembleProjectKG` `expectProjectId`). Wire = JSON-RPC sur socket
+(`SocketClient.ts`) : `kg_blob_read` params `{}` → `result` =
+`AIResult<{exists,graph,log_chunks,log_schema_version}>` (`exists:false`
+⇒ le transport TS mappe sur `null`, pas d'erreur) ; `kg_blob_write` params
+`{graph,log_chunks,log_schema_version}`. **Réalise** le port
+`KgBlobTransport` posé étape 2 — rien à redéfinir côté TS.
+
+**Vérif.** C# **non compilable dans cet env** (pas de SDK Revit / refs
+`Nice3point.Revit.Api.*` ; conda `revitmcp` = node seul) — comme **toutes**
+les commandes du repo, build dans l'env Revit (R20–R26, net48/net8). Suite
+TS (étapes 1+2) **toujours 44/44** (aucun fichier TS touché ; vérifié non
+nécessaire de relancer — rien de partagé modifié). Statut documenté dans
+les deux `README.md` `KnowledgeGraph/`.
+
+**Prochaine session — ÉTAPE 4 (spec §10.4).** Rebrancher les `kg_*.ts`
+sur `core/` via `saveProjectKG`/`loadProjectKG` (étape 2) + un
+`KgBlobTransport` réel = client `SocketClient`/`ConnectionManager`
+appelant `kg_blob_read`/`kg_blob_write` ; retirer `bridge.ts` (sidecar)
+puis `kg_bridge/`. Étape 5 ensuite : handlers `DocumentChanged`/`Opened`/
+`Sync` (cohérence cache + base `kg_detect_drift`).
+
+## 2026-05-18 — ÉTAPE 2 terminée : contrat `persist.ts` (agnostique du transport)
+
+**Chemin spec §10.2 bouclé.** `server/src/kg/persist.ts` n'est plus un
+stub : le contrat lecture/écriture du blob (graphe vivant + `action_log`
+chunké) est **implémenté au-dessus de `core/`**, strictement agnostique
+du transport. Étape 1 figée à `beacfb6` — **`core/` non modifié**.
+
+**Architecture posée (forks tranchés, doc inline).**
+
+- **Port de transport** `KgBlobTransport` + `KgBlobRecord` : le *seul*
+  seam que les étapes 3/4 fourniront (client WebSocket→C#), taillé **1:1**
+  sur `kg_blob_read`/`kg_blob_write`. `persist.ts` ne dépend QUE de ce
+  port → agnostique du transport, par construction.
+- **`KgBlobRecord`** = `{ graph (string ES), log_chunks (Array<string>
+  ES), log_schema_version (int ES) }` : mappe **1:1** sur l'Entity de la
+  `DataStorage` globale unique (§3, §4) — deux conteneurs distincts,
+  mitigation du plafond 16 Mo/string.
+- **`BlobKgPersistence`** réalise `KgPersistence` + `KgSnapshotStore`
+  (read/write atomique de l'enregistrement entier = une Tx Revit, §1) en
+  **read-modify-write** complet par op (design « toujours cohérent, 1 a/r »
+  explicitement accepté §5 ; le cache d'écritures = étape 5, **hors** de
+  ce module — séparation des responsabilités).
+- **Pont core↔blob** : `splitProjectKG` (= `to_dict()` découpé en les 2
+  conteneurs) / `assembleProjectKG` ; façade `saveProjectKG`/
+  `loadProjectKG` (ce qu'appellera l'étape 4, ≡ `persist()`/`load()` du
+  PoC mais vers ES).
+- **`InMemoryBlobTransport`** zéro-dépendance : exerce TOUT le contrat
+  *avant* que le C# (étape 3) n'existe = preuve concrète d'agnosticité.
+  Clone profond en lecture ET écriture (isole comme une vraie frontière
+  process — pas d'alias mémoire masquant un bug).
+
+**Pièges traités (documentés inline).** Chunking append-**stable** (vieux
+chunks immuables octet-pour-octet → cache/diff futurs) borné très en-deçà
+des 16 Mo + garde-fou dur 15 Mio/chunk ; compaction **par chunk entier**
+(jamais scindé ; chunk à cheval gardé entier — `diff_since()` ne lit
+qu'une fenêtre récente) avec `turnOf` injectable (découple `persist.ts`
+du schéma exact d'`ActionLogEntry`) ; `revit_binding` = **projection
+dérivée** persistée pour la forward-compat §2 (non ré-appliquée tant que
+`core/` porte encore `_revit_id` sur les nodes — documenté) ; schéma
+forward-incompat **refusé** (pas parsé de travers) ; blob/chunk corrompu
+→ `KgPersistenceError` dédiée.
+
+**Suite.** **44/44 verts** : 25 core (étape 1, **intacts** — aucune
+régression) + **19 tests de contrat** (`src/kg/__tests__/persist.test.ts`,
+même runner zéro-dep). `tsconfig.test.json` élargi à `src/kg/**` (toujours
+self-contained, que des builtins), glob `npm test` → `build-test/kg/**`.
+Build prod (`tsc` strict) vert.
+
+**Prochaine session — ÉTAPE 3 (spec §10.3).** Commandes C#
+`kg_blob_read` / `kg_blob_write` sur le moule `CreateLevelCommand.cs` +
+`DataStorage` recreate-if-missing ; elles réaliseront le port
+`KgBlobTransport` (rien à redéfinir côté TS). Puis étape 4 : rebrancher
+les `kg_*.ts` sur `core/` via `saveProjectKG`/`loadProjectKG`, retirer
+`bridge.ts` + `kg_bridge/`.
+
 ## 2026-05-18 — ÉTAPE 1 terminée : port TS de `ProjectKG` + suite verte
 
 **Chemin critique (spec §10.1) bouclé.** `kg_bridge/vendor/project_kg.py`

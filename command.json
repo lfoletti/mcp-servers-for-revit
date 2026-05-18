@@ -122,6 +122,16 @@
       "commandName": "create_dimensions",
       "description": "Create dimension annotations between elements or points in the current view",
       "assemblyPath": "RevitMCPCommandSet.dll"
+    },
+    {
+      "commandName": "kg_blob_read",
+      "description": "Read the project Knowledge Graph blob from the .rvt ExtensibleStorage (no Transaction; absent DataStorage returns exists:false)",
+      "assemblyPath": "RevitMCPCommandSet.dll"
+    },
+    {
+      "commandName": "kg_blob_write",
+      "description": "Write the project Knowledge Graph blob into the .rvt ExtensibleStorage within a Revit Transaction (recreate-if-missing)",
+      "assemblyPath": "RevitMCPCommandSet.dll"
     }
   ]
 }
