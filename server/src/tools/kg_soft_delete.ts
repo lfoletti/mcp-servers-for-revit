@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { kgBridge, kgResult, kgError } from "../kg/bridge.js";
+import { kgService, kgResult, kgError } from "../kg/service.js";
 import { kgToolsEnabled, logKgModeOnce } from "../kg/mode.js";
 
 /**
@@ -20,7 +20,7 @@ export function registerKgSoftDeleteTool(server: McpServer) {
     },
     async (args: any) => {
       try {
-        const result = await kgBridge.call("soft_delete", {
+        const result = await kgService.call("soft_delete", {
           project_id: args.project_id,
           llm_id: args.llm_id,
         });

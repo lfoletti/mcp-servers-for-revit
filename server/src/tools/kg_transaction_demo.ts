@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { kgBridge, kgResult, kgError } from "../kg/bridge.js";
+import { kgService, kgResult, kgError } from "../kg/service.js";
 import { kgToolsEnabled, logKgModeOnce } from "../kg/mode.js";
 
 /**
@@ -32,7 +32,7 @@ export function registerKgTransactionDemoTool(server: McpServer) {
     },
     async (args: any) => {
       try {
-        const result = await kgBridge.call("transaction_demo", {
+        const result = await kgService.call("transaction_demo", {
           project_id: args.project_id,
           ops: args.ops,
         });

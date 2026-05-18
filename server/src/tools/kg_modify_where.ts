@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { kgBridge, kgResult, kgError } from "../kg/bridge.js";
+import { kgService, kgResult, kgError } from "../kg/service.js";
 import { kgManyEnabled, logKgModeOnce } from "../kg/mode.js";
 
 /**
@@ -39,7 +39,7 @@ export function registerKgModifyWhereTool(server: McpServer) {
     },
     async (args: any) => {
       try {
-        const result = await kgBridge.call("modify_where", {
+        const result = await kgService.call("modify_where", {
           project_id: args.project_id,
           node_type: args.node_type,
           where: args.where ?? [],

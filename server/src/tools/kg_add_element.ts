@@ -1,6 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { kgBridge, kgResult, kgError } from "../kg/bridge.js";
+import { kgService, kgResult, kgError } from "../kg/service.js";
 import { kgToolsEnabled, logKgModeOnce } from "../kg/mode.js";
 
 /**
@@ -49,7 +49,7 @@ export function registerKgAddElementTool(server: McpServer) {
     },
     async (args: any) => {
       try {
-        const result = await kgBridge.call("add_element", {
+        const result = await kgService.call("add_element", {
           project_id: args.project_id,
           node_type: args.node_type,
           attrs: args.attrs ?? {},

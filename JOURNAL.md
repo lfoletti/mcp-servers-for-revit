@@ -6,6 +6,56 @@ Journal de bord du travail KG. Convention reprise du projet source
 
 ---
 
+## 2026-05-18 — ÉTAPE 4 terminée : `kg_*.ts` rebranchés sur `core/`, sidecar supprimé
+
+**Chemin spec §10.4 bouclé.** Le sidecar Python ne tourne plus nulle part :
+le KG vit dans le `.rvt`. Suite TS **57/57** (25 core + 19 persist + **13
+service**), build prod `tsc` vert.
+
+**Nouveaux fichiers.**
+
+- `server/src/kg/service.ts` — KG **en-process** : port **1:1** des 13
+  méthodes du sidecar (`kg_sidecar.py`) sur `core/` (ProjectKG) +
+  `persist.ts` (`saveProjectKG`/`loadProjectKG`). Mêmes noms/params/formes
+  de résultat (projections compactes, `_node_view` *avec son quirk* `id`-
+  dans-`attrs`, modèle « 1 op MCP == 1 turn ») ⇒ re-bench étape 6
+  comparable + diff outils mécanique. Cache `Map<project_id,ProjectKG>`
+  (= cache du blob ES, comme `_INSTANCES`) ; `call()` **sérialisés** (file
+  interne — `transaction()` non réentrant, parité stdin-série du sidecar).
+  `kgResult`/`kgError` déplacés ici (étaient dans `bridge.ts`).
+- `server/src/kg/transport.ts` — `SocketKgBlobTransport` : unique
+  réalisation concrète du port (étape 2) via `withRevitConnection` +
+  `sendCommand("kg_blob_read"/"kg_blob_write")` (étape 3). Déballe
+  l'`AIResult` C# en **tolérant les deux casings** du wrapper
+  (`Success`/`success` — dépend du sérialiseur RevitMCPSDK) ; champs
+  internes figés snake_case par `[JsonProperty]`. Store par défaut **lazy**
+  (aucun socket à l'import — la registration importe tout au boot).
+
+**Rebranchés.** Les 9 outils `kg_*.ts` : `../kg/bridge.js` →
+`../kg/service.js`, `kgBridge` → `kgService` (diff mécanique, surface
+`.call(method,params)` inchangée).
+
+**Supprimés** (glue sidecar morte) : `server/src/kg/bridge.ts`,
+`kg_bridge/kg_sidecar.py`, `kg_bridge/smoke_test.py`.
+
+**Décision tranchée (fork spec §9/§10.4 vs §10.6).** §10.4 dit « retirer
+`kg_bridge/` » mais §10.6 (re-bench v1≥PoC) **a besoin** du harness
+`kg_bridge/benchmark/`, et §9 nomme `kg_bridge/vendor/project_kg.py` la
+**référence figée** du port. → on retire seulement la glue sidecar
+**morte** ; `kg_bridge/{vendor,benchmark}/` **conservés jusqu'à l'étape 6**
+(suppression triviale plus tard, dé-suppression coûteuse ; le PoC gelé
+`9b9f680` garde de toute façon `kg_bridge/` complet comme pièce à
+conviction). Risque connu hérité du PoC (parité voulue) : mutation
+appliquée en mémoire **puis** persistée ; échec socket ⇒ mémoire en avance
+sur l'ES, résolu au reload (invalidation `DocumentChanged` = étape 5).
+
+**Prochaine session — ÉTAPE 5 (spec §10.5).** Handlers C#
+`DocumentChanged` / `DocumentOpened` / `DocumentSynchronizingWithCentral`
+dans `commandset/Services/KnowledgeGraph/` : invalidation/reload du cache
+serveur (cohérence §5) + bascule `deleted_at_turn` sur
+`GetDeletedElementIds()` — base de `kg_detect_drift` (Stage 2). Puis
+étape 6 : re-bench v1 vs PoC sur le harness `kg_bridge/benchmark/`.
+
 ## 2026-05-18 — ÉTAPE 3 terminée : commandes C# `kg_blob_read` / `kg_blob_write` (ES)
 
 **Chemin spec §10.3 bouclé.** Premières — et seules — lignes
