@@ -15,7 +15,7 @@ export function registerKgAddElementTool(server: McpServer) {
   if (!kgToolsEnabled()) return;
   server.tool(
     "kg_add_element",
-    "Add one or more typed elements to the project Knowledge Graph (graph-backed project memory; alternative to the flat store_*_data tools). Pass `elements` as a list — one item or many, created atomically in one transaction (all-or-nothing) and one turn. Validates against the KG schema; can attach typed relations (at_level, is_type, hosts, …). Prefer a single call with many elements over looping. Returns a compact id summary + the turn.",
+    "Add one or more typed elements to the project Knowledge Graph (graph-backed project memory; alternative to the flat store_*_data tools). Pass `elements` as a list — one item or many, created atomically in one transaction (all-or-nothing) and one turn. Validates against the strict KG schema (unknown/missing attrs reject the WHOLE batch): call kg_schema first to get each node type's exact required/optional attrs. Can attach typed relations (at_level, is_type, hosts, …). Prefer a single call with many elements over looping. Returns a compact id summary + the turn.",
     {
       elements: z
         .array(

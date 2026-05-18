@@ -43,10 +43,12 @@ SUFFIX = {
     "flat": " (Use the store_* data tools to persist and query project state.)",
     "kg": " (Use the kg_* tools to record and query project state.)",
     "kg-many": " (Use the kg_* tools to record and query project state. "
-               "Persist in a FEW bulk calls — many elements per call, "
-               "ordered by dependency (e.g. levels & types first, then "
-               "walls, then windows that reference those walls) — never "
-               "one call per element.)",
+               "FIRST discover each element type's exact required/optional "
+               "attributes (use a schema tool if one is available) so "
+               "items validate. Then persist in a FEW bulk calls — many "
+               "elements per call, ordered by dependency (types & levels "
+               "first, then walls, then windows that reference those "
+               "walls) — never one call per element.)",
 }
 
 # Pairs to report ratios for, when both profiles are present.
@@ -194,11 +196,13 @@ def main() -> int:
     ap.add_argument("--out", default=str(HERE / "out"))
     ap.add_argument("--claude", default="claude")
     ap.add_argument("--max-turns", type=int, default=40)
-    ap.add_argument("--timeout", type=int, default=180,
-                    help="per-scenario hard kill (s). 180 keeps the loop "
-                         "light: a genuinely stuck scenario fails in 3 min, "
-                         "not 10. Debug seeds OFFLINE first "
-                         "(server/scripts/seed_repro.mjs) — free, instant.")
+    ap.add_argument("--timeout", type=int, default=600,
+                    help="per-scenario hard kill (s). 600 because the v1 "
+                         "seed is latency-bound (real ES Tx/op ~5-6 min) — "
+                         "a shorter cap false-kills a WORKING v1. Loop "
+                         "lightness comes from OFFLINE debug first "
+                         "(server/scripts/seed_repro.mjs — free, instant), "
+                         "not from a short live timeout.")
     ap.add_argument("--snapshot", action="store_true",
                     help="copy persisted state after each scenario into "
                          "<out>/snapshots/ for per-scenario verification")

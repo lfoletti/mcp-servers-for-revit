@@ -28,6 +28,17 @@ async function call(label, params) {
   }
 }
 
+// --- étape "découverte de schéma" (ce que fait kg_schema) -----------------
+// Prouve que l'agent peut récupérer les attrs requis AVANT de créer →
+// plus de devinette/thrash. C'est exactement ce que le tool kg_schema
+// renvoie (méthode service `schema`, désormais exposée).
+const sch = await svc.call("schema", {});
+for (const t of ["WallType", "Wall", "FamilyType", "Window"]) {
+  console.log(`schema ${t}: required=${JSON.stringify(sch.node_types[t].required)} ` +
+    `optional=${JSON.stringify(sch.node_types[t].optional)}`);
+}
+console.log("");
+
 // --- 00_seed.txt, littéral ------------------------------------------------
 // 2 Levels, 1 WallType GEN_200, 20 murs (1 m, bout à bout sur X, h 2.7),
 // 8 fenêtres hostées sur les 8 premiers murs (sill 0.9, head 2.1).

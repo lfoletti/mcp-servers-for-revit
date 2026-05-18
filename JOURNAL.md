@@ -6,6 +6,42 @@ Journal de bord du travail KG. Convention reprise du projet source
 
 ---
 
+## 2026-05-18 — `kg_schema` exposé : la découvrabilité du schéma manquait
+
+Run 2 post-fix-prompt : v1 seed re-timeout (180 s). Dump (gratuit) :
+`nodes=4` (`N0,N1,GEN_200,WIN_0610` — le windowtype du prompt corrigé
+**a bien été créé**), `edges=0` → l'agent bloque maintenant sur les
+**20 murs**. Repro offline = 20 murs OK avec les bons attrs. Diff
+offline↔live = **moi je lisais `schema.ts`, l'agent non**.
+
+**Cause racine structurelle (frappe aussi le PoC) :** KG à schéma typé
+strict mais **aucun tool de découverte de schéma** (tools = add/modify/
+soft_delete/query/diff_since/transaction_demo/modify_where). L'agent
+**devine** les attrs requis de `Wall`/`Window` → rejet du lot atomique →
+re-essai → chaque essai = un a/r ES lent → thrash jusqu'au timeout. PoC
+« passe » car outils single + persistance instantanée → brute-force de la
+forme en quelques s ; v1 (atomique + ES lent) ne converge jamais. La
+méthode `schema` existait (ex-`m_sidecar`) — **jamais exposée en tool**.
+
+**Fix (option A, non facturable, 63/63) :**
+- **`server/src/tools/kg_schema.ts`** — nouveau tool → `service.call
+  ("schema")`, filtre `node_type` optionnel (token-cheap). Auto-découvert
+  par `register.ts`.
+- `kg_add_element` description : « call kg_schema first ».
+- `run_live.py` `SUFFIX["kg-many"]` : « FIRST discover required/optional
+  attrs (use a schema tool if available) … » — **agnostique** : v1
+  utilise `kg_schema`, le PoC gelé (sans ce tool) retombe sur
+  l'error-driven (sa réalité) → on benchmarke les surfaces réellement
+  livrées, équitable.
+- `--timeout` 180 → **600** (le seed v1 est borné par la latence ES
+  ~5-6 min ; 180 false-kill un v1 qui marche ; la légèreté vient du
+  repro offline, pas d'un timeout court).
+- `seed_repro.mjs` : préambule « découverte schéma » → prouve offline
+  que le tool rend le contrat exact (Wall/Window required) et que le
+  seed complet se construit (32 nodes/48 edges).
+
+Run 2 prêt (facturable, user) avec la vraie correction structurelle.
+
 ## 2026-05-18 — Cause racine trouvée HORS-LIGNE en ~10 ms : prompt seed ≠ schéma
 
 Boucle de debug allégée (demande user : 600 s/timeout = trop lourd).
