@@ -6,6 +6,29 @@ Journal de bord du travail KG. Convention reprise du projet source
 
 ---
 
+## 2026-05-18 — Fumée ES VERTE 8/8 : C# étapes 3 & 5 validé en réel (Revit 2025)
+
+Première **exécution** réelle du C# ExtensibleStorage (compilé la veille,
+jamais lancé). `server/scripts/kg-es-smoke.mjs` (zéro dép., parle direct
+au socket Revit — isole la couche C#, sans client MCP) sur Revit 2025,
+projet neuf « Projet1 » :
+
+1. `kg_doc_state` OK (epoch=0, `EnsureSubscribed` §5 déclenché, sans Tx).
+2. `kg_blob_read` projet vierge → `exists:false` (pas d'erreur — sémantique
+   recreate-if-missing portée par le write).
+3. `kg_blob_write` → `DataStorage` créée **dans une `Transaction`**
+   (`wrote=true, created_data_storage=true`) — cœur étape 3.
+4. `kg_blob_read` → **round-trip octet-pour-octet** du graphe + log chunké
+   + `log_schema_version`.
+5. `kg_doc_state` → **epoch inchangé 0→0** après notre write : le filtre
+   §5 (Tx « KG blob write » ignorée) marche → le cache serveur ne
+   rechargera pas sur nos propres écritures.
+
+Conséquence : `KgExtensibleStorage` / `KgDocumentWatcher` / les commandes
+`kg_blob_read|write` / `kg_doc_state` sont **prouvés en conditions
+réelles**. Tout le pont TS↔C# (étape 4 + transport socket) tient. Reste :
+re-bench v1 vs PoC (§10.6).
+
 ## 2026-05-18 — Build C# vérifié VERT (`Debug R25`) + `BUILD.md`
 
 Première compilation réelle du C# des étapes 3 & 5 sur poste Windows+Revit
