@@ -6,6 +6,30 @@ Journal de bord du travail KG. Convention reprise du projet source
 
 ---
 
+## 2026-05-18 — Build C# vérifié VERT (`Debug R25`) + `BUILD.md`
+
+Première compilation réelle du C# des étapes 3 & 5 sur poste Windows+Revit
+(impossible dans l'env de dev — node seul). **`RevitMCPCommandSet`
+compile sans erreur** : prouvé par l'arbre de staging
+`plugin\bin\AddIn 2025 Debug R25\` complet (plugin + commandset, code
+`KnowledgeGraph\` inclus). Seuls warnings = `CS0618`/`CS0168` **amont
+pré-existants** (hors périmètre, non touchés).
+
+Pièges rencontrés, tous documentés dans **`BUILD.md`** (nouveau, tracké) :
+- `MSB4126` : la solution n'a que des configs `… | Any CPU` → ne pas
+  passer `-p:Platform=x64` (le x64 est forcé dans les `.csproj`).
+- `MSB4062` : `RevitMCPCommandSet.Tests` (SDK `Nice3point.Revit.Sdk/6.1.0`,
+  tâches MSBuild en `net10.0`) échoue faute de runtime .NET 10 → builder
+  les 2 projets *runtime* directement, pas le `.sln` (le projet de tests
+  C# est hors chemin étape 6).
+- Faux négatif de vérif : `$root` non défini + `-EA SilentlyContinue` →
+  toujours vérifier l'install par **chemin littéral** ; l'arbre
+  `bin\AddIn …\` peuplé = preuve de référence que le build a réussi.
+
+Reste : déployer dans `%AppData%\…\Addins\2025\` (auto en `Debug`, sinon
+`robocopy` — cf. `BUILD.md` §3), puis **étape 6** (re-bench, requiert
+Revit lancé + bouton *Switch* + serveur MCP).
+
 ## 2026-05-18 — ÉTAPE 5 terminée : protocole de cohérence cache↔`.rvt` (§5)
 
 **Chemin spec §10.5 bouclé.** Le cache serveur ne peut plus mentir
