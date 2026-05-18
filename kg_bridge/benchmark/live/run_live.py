@@ -194,7 +194,11 @@ def main() -> int:
     ap.add_argument("--out", default=str(HERE / "out"))
     ap.add_argument("--claude", default="claude")
     ap.add_argument("--max-turns", type=int, default=40)
-    ap.add_argument("--timeout", type=int, default=600)
+    ap.add_argument("--timeout", type=int, default=180,
+                    help="per-scenario hard kill (s). 180 keeps the loop "
+                         "light: a genuinely stuck scenario fails in 3 min, "
+                         "not 10. Debug seeds OFFLINE first "
+                         "(server/scripts/seed_repro.mjs) — free, instant.")
     ap.add_argument("--snapshot", action="store_true",
                     help="copy persisted state after each scenario into "
                          "<out>/snapshots/ for per-scenario verification")

@@ -5,10 +5,11 @@ later, persisting it with the project-memory tools available to you.
 Project "Demo":
 - Level N0 at elevation 0 m, Level N1 at elevation 3 m.
 - A wall type "GEN_200" with total thickness 0.2 m.
+- A window family type "WIN_0610" (family "Window", category Windows).
 - 20 walls on level N0, all of type GEN_200, 1 m long each, 2.7 m high,
   laid end to end along the X axis.
-- 8 windows, each hosted on one of those walls (the first 8), sill 0.9 m,
-  head 2.1 m.
+- 8 windows of type WIN_0610, each hosted on one of those walls (the
+  first 8), sill 0.9 m, head 2.1 m.
 
 Persist every element. Confirm what you stored and how (which tool, how many
 records/nodes).

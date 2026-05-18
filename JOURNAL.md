@@ -6,6 +6,42 @@ Journal de bord du travail KG. Convention reprise du projet source
 
 ---
 
+## 2026-05-18 — Cause racine trouvée HORS-LIGNE en ~10 ms : prompt seed ≠ schéma
+
+Boucle de debug allégée (demande user : 600 s/timeout = trop lourd).
+`server/scripts/seed_repro.mjs` rejoue le seed 00_seed.txt contre le KG
+**en mémoire**, zéro Revit/API, instantané. Verdict immédiat :
+
+```
+OK   levels+type (3)        OK   20 walls (20, 40 edges)
+FAIL 8 windows: add_element element[0] (node_type=Window) failed:
+     Missing required attrs for Window: ['type_ref']
+(avec un FamilyType fenêtre d'abord → seed complet : 32 nodes, 48 edges)
+```
+
+**Cause racine définitive — ni v1, ni le merge, ni la latence :** le
+prompt `00_seed.txt` spécifie « a wall type GEN_200 » (→ `Wall.type_ref`
+OK) mais **aucun type de fenêtre**, alors que le schéma typé strict
+**exige `Window.type_ref`** (un FamilyType). L'agent suivant le prompt
+crée des fenêtres invalides → échec. **Frappe les DEUX stacks** (même
+schéma vendored) → les runs « v1 mauvais » = ce mismatch prompt/schéma +
+thrash atomique, pas un défaut v1. En v1 (lots atomiques + steering) le
+thrash va au timeout ; en PoC (single) l'agent grappillait → fausse
+asymétrie.
+
+**Corrections (non facturables) :**
+- `prompts/00_seed.txt` : ajout d'un *window family type* « WIN_0610 »
+  + fenêtres « of type WIN_0610 » (miroir du wall type déjà présent).
+  Symétrique : `run_live` sert ce prompt aux 2 stacks → A/B équitable.
+  Repro prouve : seed complet se construit (32 nodes/48 edges).
+- `run_live.py` : défaut `--timeout` 600 → **180 s** (un vrai blocage
+  échoue en 3 min, pas 10).
+- `seed_repro.mjs` tracké : débogueur hors-ligne ; le harness facturable
+  ne tourne QUE quand le repro passe.
+
+**Méthodo actée :** debug seeds/scénarios **offline d'abord** (gratuit,
+instantané), live A/B seulement ensuite. Run 2 prêt à relancer (user).
+
 ## 2026-05-18 — Étape 6 run 2 (steered) : seed timeout → fix erreurs de lot lisibles
 
 Run 2 v1 (merge + `--steer kg-many`) : seed **timeout 600 s** à nouveau.
