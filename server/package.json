@@ -15,7 +15,7 @@
         "prebuild": "npm run clean",
         "build": "tsc",
         "pretest": "tsc -p tsconfig.test.json",
-        "test": "node --test \"build-test/kg/core/**/*.test.js\"",
+        "test": "node --test \"build-test/kg/**/*.test.js\"",
         "prepublishOnly": "npm run build"
     },
     "files": [
