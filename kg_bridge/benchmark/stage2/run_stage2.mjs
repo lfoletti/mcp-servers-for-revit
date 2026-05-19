@@ -42,8 +42,9 @@ const arg = (k, d) => { const i = argv.indexOf(k); return i >= 0 ? argv[i + 1] :
 const stack = arg("--stack");
 const scen = arg("--scenario");
 const stub = argv.includes("--stub");
-if (!["A", "B"].includes(stack) || !["P1", "P3"].includes(scen)) {
-  console.error("usage: --stack A|B --scenario P1|P3 [--stub]"); process.exit(2);
+const SCENARIO_FILE = { P1: "10_P1.txt", P3: "20_P3.txt", P5: "30_P5.txt" };
+if (!["A", "B"].includes(stack) || !SCENARIO_FILE[scen]) {
+  console.error("usage: --stack A|B --scenario P1|P3|P5 [--stub]"); process.exit(2);
 }
 mkdirSync(OUT, { recursive: true });
 
@@ -98,7 +99,7 @@ if (stub) {
   runMeta.stub_build = "1 level + 2 walls created via raw socket";
 } else {
   console.log("\n--- (2) claude -p ---");
-  const promptPath = resolvePath(HERE, "prompts", scen === "P1" ? "10_P1.txt" : "20_P3.txt");
+  const promptPath = resolvePath(HERE, "prompts", SCENARIO_FILE[scen]);
   const prompt = readFileSync(promptPath, "utf-8") + STEER[stack];
   // Spawn claude via a Python wrapper (no shell, argv list, prompt via
   // stdin) — Windows + shell:true mangles multi-line prompts in cmd.exe;
