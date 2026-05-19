@@ -1,0 +1,14 @@
+{
+  "_comment": "FLAT baseline (no-kg). Upstream store_*_data tools -> local SQLite (server/revit-data.db), TS-only: does NOT touch the Revit C# socket (verified: store_*_data import only ../database/service.js; git diff 9b9f680..HEAD on the flat path is empty). Uses the FROZEN base build (poc-baseline @ 9b9f680) as the true 'base' reference; the flat code is byte-identical to current anyway. KG_BENCH_MODE=flat => kg_* NOT registered, sidecar never spawns. 'command' is the ABSOLUTE conda 'revitmcp' node.exe (plain 'node' not on PATH). Changing this needs a Claude Code restart + re-approval of THIS profile dir.",
+  "mcpServers": {
+    "revit": {
+      "command": "C:/Users/lauro/AppData/Local/anaconda3/envs/revitmcp/node.exe",
+      "args": [
+        "C:/Users/lauro/Documents/IT/poc-baseline/server/build/index.js"
+      ],
+      "env": {
+        "KG_BENCH_MODE": "flat"
+      }
+    }
+  }
+}

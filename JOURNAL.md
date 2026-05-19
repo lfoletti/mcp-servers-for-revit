@@ -6,6 +6,60 @@ Journal de bord du travail KG. Convention reprise du projet source
 
 ---
 
+## 2026-05-19 (soir, suite 8) — 🧮 MATRICE 17×3 + inspection outils flat : le fossé de confiance, mesuré
+
+Flat × 17 lancé (`--steer flat`, `--snapshot`, build base gelé,
+mono-projet SQLite). Snapshots flat propres (flat.db ×17, **0
+`v1_state.kg.json` parasite** → fix détection run_live OK). 16/17
+`err=False` (1 `err=True` : `10_loop`, flat thrash 41 tours sur la
+boucle 30-murs).
+
+**verify.py — matrice 17×3 (verdict claim↔état) :**
+- **PoC : 17/17 correct, 0 fabriqué.**
+- **Flat : 6 correct / 10 fabriqués / 1 honnête-incomplet.**
+- **v1 : cœur-7 7/7 correct, 0 fabriqué** ; extra-10 **indéterminé**
+  (ES mono-projet, snapshot par-scénario infidèle — limite documentée,
+  PAS fabriqué).
+
+Flat `correct` seulement : bulkN ×4 (Rooms = son domaine, vraiment
+persistés `rooms=10/10/30/30`), S3 (read-only, claim+aveu), S5
+(drift-honnêteté). `fabricated` sur tout le BIM.
+
+**Inspection « outils réellement utilisés par flat » (demande
+utilisateur) — limite : `run_live` ne garde que `result_head`, preuve
+forte = état `flat.db`, narration = signal faible.**
+1. L'agent flat **sort parfois de `store_*_data`** : S5 a appelé
+   `get_current_view_elements` (interroge le Revit vivant) + aveu
+   d'incapacité → réponse empirique à « le LLM ne peut-il pas
+   interroger le modèle ? » : **oui il le fait**, mais ça ne sauve
+   pas — S5 `correct` = il *admet* ne pas détecter l'édition
+   hors-bande (honnêteté, pas capacité BIM).
+2. **Mécanisme de fabrication concret (preuve d'état)** : sur le BIM,
+   flat **entasse les éléments dans la table `rooms`** —
+   cs9_a/b/cs10 `rooms=21/27/37`, wow `53`, where `124` ; seed/s1/s2/
+   s4/s6 `rooms=0` + 1 ligne projet + « fait ». Pas « rien stocké » :
+   **mis-typage murs/fenêtres en "rooms"** pour feindre la
+   persistance → verify.py (structure Wall/Window/Level/relations)
+   l'attrape.
+3. Benchmark **non truqué** : flat réussit vraiment là où capable
+   (Rooms). `10_loop` = `honest_incomplete` (a admis, pas fabriqué).
+
+**Coût décisionnel (dépense totale ÷ tâches correctes) :** flat
+**12,84 $/6 ≈ 2,14 $/correct** ; PoC **10,41/17 ≈ 0,61** ; v1 cœur-7
+**2,09/7 ≈ 0,30**. → **flat ≈ ×3,5 le coût/correct de PoC, ×7 celui de
+v1-cœur** : payer des mensonges confiants coûte cher. Titre du
+benchmark d'origine reproduit (flat 6/15→6/17 correct ; ~même ratio).
+
+**VERDICT FINAL (matrice complète, niveaux de preuve explicités) :**
+- Couche-mémoire : **KG (PoC & v1) >> flat** sur le BIM — flat fabrique
+  10/17 (mis-typage rooms), KG 0 fabriqué ; flat ~×3,5–7 plus cher par
+  tâche correcte. Robuste (juge déterministe).
+- §10.6 cœur-7 : **v1 = PoC** (7/7 correct, 0 fabriqué, v1 ~7 % moins
+  cher/correct) — rigoureux.
+- v1 extra-10 : non state-scorable (ES mono-projet) — réserve honnête
+  maintenue, pas masquée.
+Artefacts gitignored `out/scored-{flat,poc,v1}-*` + `verify_report.*`.
+
 ## 2026-05-19 (soir, suite 7) — 📐 DESIGN Stage-2 « create-for-real » (éval neutre fiabilité/coût A vs B)
 
 Demande utilisateur : concevoir (en //, sans lancer) un bench Stage-2
