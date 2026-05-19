@@ -146,12 +146,16 @@ def snapshot_state(profile: dict, out_dir: Path, scen: str,
             except OSError:
                 pass
     cmd = profile.get("command")
-    if (not kgh) and cmd:
-        # v1/ES stack: no KG_HOME on disk — the KG lives in the .rvt
-        # ExtensibleStorage. Dump it via the same socket v1_state_dump
-        # uses, into the snapshot kg/ dir, in the exact PoC .kg.json
-        # shape verify.py reads ({project_id, nodes, action_log, ...}).
-        # Best-effort, like the copies above.
+    mode = profile.get("mode")
+    if (not kgh) and cmd and mode in ("kg", "kg-many"):
+        # v1/ES stack: no KG_HOME on disk AND a KG mode => the KG lives
+        # in the .rvt ExtensibleStorage. Dump it via the same socket
+        # v1_state_dump uses, into the snapshot kg/ dir, in the exact
+        # PoC .kg.json shape verify.py reads ({project_id, nodes,
+        # action_log, ...}). Best-effort, like the copies above.
+        # NOTE the mode gate: the FLAT profile also has no KG_HOME and a
+        # command, but mode='flat' => SQLite, snapshotted via sqlite_db
+        # below — it must NOT trigger this ES dump.
         kdst = dest / "kg"
         kdst.mkdir(exist_ok=True)
         try:
