@@ -27,11 +27,15 @@
  * de `transaction()` n'est pas réentrant ; le sidecar lisait stdin en
  * série).
  *
- * Risque connu, hérité du PoC (parité voulue) : mutation appliquée en
- * mémoire PUIS persistée. Si `saveProjectKG` (socket/Revit) échoue, la
- * mémoire est en avance sur l'ES — résolu au prochain reload (invalidation
- * `DocumentChanged` = étape 5). Même forme de risque que le `persist()`
- * disque du sidecar.
+ * Mutation appliquée en mémoire PUIS persistée (parité PoC voulue). Si
+ * `saveProjectKG` (socket/Revit) échoue, le cache RAM serait EN AVANCE
+ * sur l'ES. L'invalidation §5 (`DocumentChanged`) ne couvre PAS ce cas
+ * (nos propres writes ne bumpent pas l'epoch) : reproduit à froid le
+ * 2026-05-19 (JOURNAL) — `kg_query` mentait avec une mutation jamais
+ * persistée. **Fix A** : `persistOrEvict()` évince l'entrée de cache du
+ * project_id sur échec persist ⇒ le prochain `getKg()` recharge l'ES
+ * (= la vérité durable), jamais un cache menteur. (Cause racine du
+ * timeout = transport C# entrant, Fix B, hors de ce fichier.)
  */
 import {
   CREATED_AT,
@@ -303,6 +307,40 @@ export class KgService {
     return kg;
   }
 
+  /**
+   * Persiste le KG ; **Fix A** (cold repro 2026-05-19, cf. JOURNAL). La
+   * mutation est déjà commitée dans le `ProjectKG` EN CACHE (transaction
+   * synchrone) avant cet appel. Si `saveProjectKG` échoue (typiquement le
+   * timeout socket 120 s sur `kg_blob_write` quand le payload whole-blob
+   * dépasse la limite de réassemblage entrant C# — cause racine = Fix B,
+   * hors de ce fichier), le cache serait EN AVANCE sur l'ES durable et
+   * `kg_query` mentirait. On évince donc l'entrée de cache du project_id
+   * (même clé résolue que `getKg`) : le prochain `getKg()` rechargera
+   * l'ES = la vérité durable (comportement prouvé par la colonne `instF`
+   * de la sonde). On re-lève avec un message **sans ambiguïté** : aucun
+   * commit en arrière-plan à supposer, ré-émettre en plus petits lots.
+   */
+  private async persistOrEvict(
+    projectId: string | undefined,
+    kg: ProjectKG
+  ): Promise<void> {
+    try {
+      await saveProjectKG(this.getStore(), kg);
+    } catch (e) {
+      const pid = projectId || "default";
+      this.instances.delete(pid); // prochain getKg ⇒ reload ES (vérité)
+      const base = e instanceof Error ? e.message : String(e);
+      throw new Error(
+        `${base} — write NOT persisted (durable .rvt ES unchanged). The ` +
+          `in-memory KG view for project '${pid}' has been invalidated and ` +
+          `will reload from ES on next access. Do NOT assume a background ` +
+          `commit and do NOT blind-retry the same payload: re-issue the ` +
+          `write in SMALLER batches (the C# socket cannot reassemble a ` +
+          `large inbound request).`
+      );
+    }
+  }
+
   /** Dispatch sérialisé, signature identique à l'ancien `kgBridge.call`. */
   call(method: string, params: Dict = {}): Promise<any> {
     const run = this.queue.then(() => this.dispatch(method, params ?? {}));
@@ -392,7 +430,7 @@ export class KgService {
         edgesAdded += (spec["edges"] ?? []).length;
       }
     });
-    await saveProjectKG(this.getStore(), kg);
+    await this.persistOrEvict(p["project_id"], kg);
     return {
       ...idsCompact(newIds),
       edges_added: edgesAdded,
@@ -416,7 +454,7 @@ export class KgService {
         ids.push(it["llm_id"]);
       }
     });
-    await saveProjectKG(this.getStore(), kg);
+    await this.persistOrEvict(p["project_id"], kg);
     return { ...idsCompact(ids), turn: kg.turn };
   }
 
@@ -431,7 +469,7 @@ export class KgService {
       kg.advance_turn();
       for (const nid of matched) kg.modify_node(nid, p["updates"]);
     });
-    await saveProjectKG(this.getStore(), kg);
+    await this.persistOrEvict(p["project_id"], kg);
     return {
       node_type: nodeType,
       matched: matched.length,
@@ -454,7 +492,7 @@ export class KgService {
         atItem("soft_delete", i, `llm_id=${id}`, () => kg.soft_delete(id));
       }
     });
-    await saveProjectKG(this.getStore(), kg);
+    await this.persistOrEvict(p["project_id"], kg);
     return {
       ...idsCompact(llmIds),
       turn: kg.turn,
