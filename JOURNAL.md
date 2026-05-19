@@ -6,6 +6,25 @@ Journal de bord du travail KG. Convention reprise du projet source
 
 ---
 
+## 2026-05-19 (soir, suite 10) — 🔗 Stage-2 step 2 RÉSOLU : `kg_bind_revit_id` livré (TS-only) + §2 binding exposé
+
+Step-2 gate (binding KG↔ElementId, prérequis bloquant de B) tranché.
+Constat : core `ProjectKG` a déjà set/get/find_by_revit_id mais
+**non exposés** (dispatch + outils kg_* muets) → B inévaluable.
+**Décision utilisateur : exposer TS-only.** Livré : `service.ts`
+case `bind_revit_id` + `mBindRevitId` (list-native, atomique,
+**sans advance_turn** — métadonnée framework, préserve turn/diff —
+`persistOrEvict`) ; outil `server/src/tools/kg_bind_revit_id.ts`
+(auto-registré via `register.ts`). Aucun C#, aucune modif cœur.
+`tsc` clean, suite **63/63** (0 régression). Vérif offline non
+facturable (InMemory, sans Revit) : bind → **turn inchangé** (1→1),
+`_revit_id` ressort dans `kg_query` attrs (⇒ cross-check KG↔.rvt &
+drift), **rollback atomique** sur mauvais lot (erreur lisible
+`element[i] (llm_id=…) failed`). ⇒ **stack B redevient évaluable** ;
+liaison §2/Stage-2 différée désormais sur la surface MCP.
+`DESIGN-bench-stage2.md` §3bis. **Steps 1 & 2 verts ; reste step 3 :
+pilote S1+S3 A vs B (facturable) — non lancé.**
+
 ## 2026-05-19 (soir, suite 9) — 🟢 Stage-2 pilote step 1 (vérificateur) PASSÉ — non facturable
 
 Pilote Stage-2 lancé (après push fork `dcd4533..23c11e2`). Step 1 du

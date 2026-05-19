@@ -366,6 +366,8 @@ export class KgService {
         return this.mModifyWhere(p);
       case "soft_delete":
         return this.mSoftDelete(p);
+      case "bind_revit_id":
+        return this.mBindRevitId(p);
       case "query":
         return this.mQuery(p);
       case "diff_since":
@@ -456,6 +458,41 @@ export class KgService {
     });
     await this.persistOrEvict(p["project_id"], kg);
     return { ...idsCompact(ids), turn: kg.turn };
+  }
+
+  /**
+   * Lie des nœuds KG à des `ElementId` Revit, **list-native 1..N**,
+   * atomique. Câble le `set_revit_id` du core (déjà présent, framework-
+   * managed). **PAS** d'`advance_turn` ni d'entrée `action_log` : une
+   * liaison n'est pas une mutation de projet — bumper le turn
+   * corromprait la sémantique turn/`diff_since` dont le bench dépend.
+   * `transaction()` (sans advance_turn) = atomicité du lot ;
+   * `persistOrEvict` = durable + cache honnête (Fix A). Permet à un
+   * agent qui crée du réel dans Revit (`create_*` rend les ElementId)
+   * de rattacher son KG au modèle → cross-check & détection de drift
+   * (le `_revit_id` ressort tel quel dans `kg_query`, attrs).
+   */
+  private async mBindRevitId(p: Dict): Promise<Dict> {
+    const kg = await this.getKg(p["project_id"]);
+    const bindings: Dict[] = p["bindings"] ?? [];
+    const ids: string[] = [];
+    kg.transaction(() => {
+      for (let i = 0; i < bindings.length; i++) {
+        const b = bindings[i];
+        atItem("bind_revit_id", i, `llm_id=${b["llm_id"]}`, () =>
+          kg.set_revit_id(b["llm_id"], b["revit_id"])
+        );
+        ids.push(b["llm_id"]);
+      }
+    });
+    await this.persistOrEvict(p["project_id"], kg);
+    return {
+      ...idsCompact(ids),
+      turn: kg.turn,
+      note:
+        "revit binding is framework metadata: no turn bump, no " +
+        "action_log entry; the _revit_id shows in kg_query attrs",
+    };
   }
 
   private async mModifyWhere(p: Dict): Promise<Dict> {

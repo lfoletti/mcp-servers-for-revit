@@ -66,6 +66,25 @@ construction ?* Honnête : **la fiabilité de B est conditionnée à une
 fonctionnalité non encore construite et non prouvée.** Le pilote (§8)
 doit valider le binding AVANT toute matrice.
 
+## 3bis. GATE STEP 2 — binding KG↔ElementId : RÉSOLU (2026-05-19, TS-only)
+
+Constat non facturable : le core `ProjectKG` a déjà
+`set_revit_id`/`get_revit_id`/`find_by_revit_id`/`snapshot_revit_id_map`
+mais **non exposés** (dispatch `service.ts` + outils `kg_*` muets) →
+stack B était inévaluable (S5/drift, cross-check par élément).
+**Décision utilisateur : exposer (TS-only).** Livré :
+`service.ts` case `bind_revit_id` + `mBindRevitId` (list-native 1..N,
+atomique via `transaction()`, **pas d'`advance_turn`** — la liaison est
+métadonnée framework, ne corrompt pas turn/`diff_since` — `persistOrEvict`
+pour durable+cache honnête) ; nouvel outil `kg_bind_revit_id.ts`
+(auto-registré). **Aucun C#, aucune modif cœur.** `tsc` clean, suite
+**63/63** (0 régression). Vérif offline (InMemory, sans Revit) :
+bind → turn inchangé ✓, `_revit_id` visible dans `kg_query` attrs ✓
+(⇒ cross-check KG↔.rvt & drift faisables), rollback atomique sur
+mauvais lot ✓. **⇒ stack B redevient évaluable** ; la liaison
+§2/Stage-2 différée est désormais sur la surface MCP. Steps 1 & 2
+verts → reste **step 3 : pilote S1+S3 A vs B (facturable)**.
+
 ## 4bis. RÉSULTAT dry-run vérificateur (2026-05-19) + DÉCISION
 
 Probe non facturable (raw socket `ai_element_filter`,
