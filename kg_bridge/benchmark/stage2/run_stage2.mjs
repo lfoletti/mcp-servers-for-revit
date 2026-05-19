@@ -100,8 +100,13 @@ if (stub) {
   console.log("\n--- (2) claude -p ---");
   const promptPath = resolvePath(HERE, "prompts", scen === "P1" ? "10_P1.txt" : "20_P3.txt");
   const prompt = readFileSync(promptPath, "utf-8") + STEER[stack];
-  const r = spawnSync("claude", ["-p", prompt, "--output-format", "json", "--max-turns", "40", "--allowedTools", "mcp__revit"],
-    { cwd: PROFILE_DIR[stack], encoding: "utf-8", shell: true, timeout: 1500000 });
+  // Spawn claude via a Python wrapper (no shell, argv list, prompt via
+  // stdin) — Windows + shell:true mangles multi-line prompts in cmd.exe;
+  // Python's subprocess pattern (proven by run_live.py) handles claude.cmd
+  // + multi-line strings reliably. See _run_claude.py.
+  const wrapper = resolvePath(HERE, "_run_claude.py");
+  const r = spawnSync("python", [wrapper, PROFILE_DIR[stack], "40", "1500"],
+    { input: prompt, encoding: "utf-8", timeout: 1600000 });
   let claudeJson = null; try { claudeJson = JSON.parse(r.stdout); } catch {}
   runMeta.claude = { exit: r.status, json: claudeJson, raw_head: (r.stdout || "").slice(0, 400), stderr_head: (r.stderr || "").slice(0, 300) };
   console.log("claude exit", r.status, "is_error=", claudeJson?.is_error, "turns=", claudeJson?.num_turns, "wall_s=", ((Date.now() - t0) / 1000).toFixed(1));
