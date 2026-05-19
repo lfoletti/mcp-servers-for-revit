@@ -6,6 +6,60 @@ Journal de bord du travail KG. Convention reprise du projet source
 
 ---
 
+## 2026-05-19 (soir, suite 4) — 🧱 DETTE D'ÉCHELLE : whole-blob write O(état+historique)/op + PLAN Fix B-3
+
+Question utilisateur (suite à la contamination du blob v1) : « tout le
+blob est-il transporté à chaque requête ? » Réponse vérifiée dans le
+code — **distinguer lectures et écritures.**
+
+**Blob** = `KgBlobRecord = { graph (1 string ES), log_chunks
+(Array<string> ES, action_log append-only chunké), log_schema_version }`
+dans **une seule `DataStorage` globale** (mono-projet).
+
+**Lectures (`kg_query`/`diff_since`/`stats`) — PAS de transport du blob
+par requête.** Le cache §5 (`service.ts getKg`) ne fait qu'un sondage
+`kg_doc_state` minuscule (epoch/docKey, ~13 ms, sans Tx) ; tant que
+l'epoch n'a pas bougé → `ProjectKG` en mémoire, **aucun read**. Blob
+relu seulement sur cache-miss (1er accès / restart / changement
+hors-bande). Vérifié `kg-svc-probe` (§5 holds, no per-op reload).
+
+**Écritures (`kg_add_element`/`modify_*`/`soft_delete`) — OUI, tout le
+record part à chaque op.** `persist.ts` l.23-25 : *« read-modify-write
+de l'enregistrement complet à chaque opération mutante — design
+"toujours cohérent, 1 a/r par op" accepté §5 »*. Chaque mutation ne
+**relit pas** (cache) mais **re-sérialise + ré-émet l'intégralité**
+(`graph` entier + **tous** les `log_chunks`) en 1 `Transaction` Revit.
+= **O(état total + historique total) par écriture**, pas O(delta).
+
+**Conséquences.** Payload d'écriture **monotone croissant** (taille
+projet + historique append-only). C'est précisément pourquoi le blob
+`Demo` contaminé à 222 nœuds rendait chaque write suivant énorme
+(`bulkN`/`modwhere` dégradés, `wow` DNF). **Ne passe pas à l'échelle**
+(gros modèles / longue histoire). Dette architecturale réelle, pas un
+détail. Atténué mais pas résolu : cache §5 (tue le coût *lecture*) ;
+log chunké + compactable (`persist.ts` l.18-20/92-100 : ≤1 Mo/chunk,
+plafond 16 Mo, vieux chunks élaguables, `diff_since` = fenêtre récente)
+→ réduit *combien* de chunks, pas le caractère whole-blob ; **Fix B** a
+rendu les gros writes **non bloquants**, **pas moins chers**.
+
+**(b) PLAN POST-BENCH — Fix B-3 = prochaine étape architecturale.**
+Sortir du whole-blob write. Deux formes (à arbitrer) :
+1. **Persistance delta / append-only** : n'écrire que les *nouvelles*
+   entrées de log + le delta de graphe, au lieu du record complet.
+   Le log étant déjà append-only & chunké, append le(s) chunk(s)
+   actif(s) seulement ; graphe en patch incrémental ou snapshot
+   périodique + replay.
+2. **Write-behind** : journal local append-only = vérité immédiate ;
+   checkpoint ES asynchrone/coalescé. Découple la latence ES du chemin
+   critique agent.
+Implications : **change le contrat `persist.ts`** (« 1 a/r complet par
+op » §5) → re-concevoir la cohérence cache↔ES + la crash-safety
+(au moins aussi soigneusement que Fix A) ; **plus gros que Fix A/B** ;
+**NON requis pour §10.6** (satisfait par le cœur-7, déjà commité
+`bf4264a`). Séquencement : **après** la clôture du bench (extra-sets en
+cours). Réf. `DESIGN-internalize-es.md` §1/§5/§10 (le « write-cache
+étape 5 » est la lecture ; B-3 est le pendant écriture, non spécifié).
+
 ## 2026-05-19 (soir, suite 3) — 🏁 A/B LIVE FACTURABLE : v1 ≥ PoC — §10.6 SATISFAIT
 
 Run A/B complet (Claude Code réel, `claude -p`, facturable) v1 (Revit +
