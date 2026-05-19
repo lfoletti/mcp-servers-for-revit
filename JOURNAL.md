@@ -6,6 +6,31 @@ Journal de bord du travail KG. Convention reprise du projet source
 
 ---
 
+## 2026-05-19 (soir, suite 7) — 📐 DESIGN Stage-2 « create-for-real » (éval neutre fiabilité/coût A vs B)
+
+Demande utilisateur : concevoir (en //, sans lancer) un bench Stage-2
+où le bâtiment est **créé pour de vrai** dans le `.rvt` et l'agent
+répond « par tous moyens » (interroger le modèle vivant inclus).
+**But explicite : évaluer honnêtement avantages/inconvénients RÉELS
+(fiabilité + coût) des 2 approches — PAS prouver que le KG gagne** ;
+le design doit pouvoir conclure « KG interne non rentable en contexte
+modèle-vivant ». Doc : `DESIGN-bench-stage2.md` (tracké).
+
+Points clés actés : stacks **A = Revit-direct/no-kg** vs **B = Revit +
+KG-interne** (les 2 ont Revit, seule différence = maintenir/utiliser un
+index KG) ; flat-SQLite hors périmètre. C'est l'axe « Revit-augmented /
+Stage-2 » déjà signalé différé par `BENCHMARK.md`/`DESIGN-kg.md`. Il
+**mesure** ce que Stage-1 ne fait que **modéliser** (coût query
+modèle-vivant). **Prérequis bloquant** : le binding KG↔ElementId
+(`Map<ElementId,llm_id>`, §2/Stage-2 **différé & non prouvé**) — sans
+lui S5 (drift) est inévaluable et la fiabilité de B est conditionnée à
+une feature non construite. Vérité-terrain = le `.rvt` réel → **nouveau
+vérificateur déterministe** à concevoir (ingénierie neuve, dry-run non
+facturable d'abord). Critères pré-enregistrés (incl. issues où B perd /
+KG non rentable). Plan de-risk : dry-run vérificateur → valider binding
+→ **pilote S1+S3 seulement** → matrice complète si verts. Séquencement
+recommandé : **après** clôture du 17×3 (run flat `b10bfnziw` en cours).
+
 ## 2026-05-19 (soir, suite 6) — ⚖️ NOTATION verify.py : 0 fabrication ; v1 cœur-7 = PoC (juge déterministe) ; limite ES mono-projet actée
 
 Demande : ajouter le verdict claim↔état {correct/fabricated/
