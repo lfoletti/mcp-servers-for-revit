@@ -6,6 +6,46 @@ Journal de bord du travail KG. Convention reprise du projet source
 
 ---
 
+## 2026-05-19 (soir, suite 3) — 🏁 A/B LIVE FACTURABLE : v1 ≥ PoC — §10.6 SATISFAIT
+
+Run A/B complet (Claude Code réel, `claude -p`, facturable) v1 (Revit +
+ES, build patché Fix A+B) vs PoC gelé `9b9f680` (sidecar), `--steer
+kg-many`, seed + S1–S6 (7 prompts). Préconditions vérifiées non
+facturables (builds, sidecar networkx, profils ; **approbation MCP
+re-faite par l'utilisateur** ; 3 sondes headless ~0,32 $ ont prouvé que
+les kg_* se chargent en headless des 2 côtés — de-risk avant dépense).
+Sorties VOID pré-fix archivées `out/{poc,v1}-void-prefixAB`.
+
+**Résultat — 0 erreur / 0 timeout, 7/7 scénarios des 2 côtés.** Le
+`00_seed` v1 (qui s'évaporait à 120 s avant) : **197 s, err=False**.
+Totaux `v1/poc` (`compare_stacks`) :
+
+| métrique | PoC | v1 | v1/poc | §10.6 |
+|---|--:|--:|--:|---|
+| in tok | 78 | 78 | x1.00 | ✅ |
+| out tok | 32 505 | 30 254 | **x0.931** | ✅ <1 (−7 %) |
+| turns | 41 | 43 | x1.049 | ✅ ≈1 |
+| wall s | 540.9 | 492.6 | **x0.911** | ✅ <1 (−9 % ; surcoût ES attendu NON matérialisé) |
+| cost $ | 2.539 | 2.395 | **x0.943** | ✅ <1 (−5,7 %) |
+
+**Parité d'état final EXACTE** (`v1_state_dump` ES live vs PoC
+`.kg-bench-poc/Demo.kg.json`, structurel — la géométrie est agent-choisie
+non figée) : les deux = `project_id=Demo`, **32 nœuds / 56 arêtes**,
+même distribution (`FamilyType 1, Level 2, Wall 20, WallType 1, Window
+8` ; `at_level 20, hosts 8, is_type 28`). Ce n'est **pas** l'artefact
+VOID (« moins cher car fait moins ») : v1 a fait **tout le travail** ET
+est ≈/meilleur sur chaque métrique agent. + surface 1:1 (60/60 TS + 13
+service + fumée ES 8/8).
+
+**VERDICT : v1 ≥ PoC sur in/out/turns/wall/cost, parité d'état exacte
+→ §10.6 « prouver v1 ≥ PoC » SATISFAIT.** L'arc complet (diag du seed
+qui s'évaporait → Fix A honnêteté → Fix B cause racine transport C# →
+validation à froid → A/B facturable) est clos avec succès. Artefacts
+(gitignored, données de travail) : `kg_bridge/benchmark/live/out/{poc,
+v1}/live_results.{json,md}`, `out/v1/compare_stacks.{json,md}`,
+`out/v1/v1_state.kg.json`. Coût A/B ≈ 4,93 $ (PoC 2,54 + v1 2,39) +
+sondes 0,32.
+
 ## 2026-05-19 (soir, suite 2) — ✅✅ Fix B BUILDÉ, DÉPLOYÉ & VALIDÉ À FROID — bench viable
 
 Patch B-1 (`plugin/Core/SocketService.cs`) buildé sur cette box
