@@ -6,6 +6,23 @@ Journal de bord du travail KG. Convention reprise du projet source
 
 ---
 
+## 2026-05-19 (soir, suite 9) — 🟢 Stage-2 pilote step 1 (vérificateur) PASSÉ — non facturable
+
+Pilote Stage-2 lancé (après push fork `dcd4533..23c11e2`). Step 1 du
+plan de-risk = « peut-on lire le `.rvt` réel déterministe sans
+Claude ? ». Probes raw-socket : `ai_element_filter`
+(`filterVisibleInCurrentView:false` = **document-wide**) lit
+comptes/type/famille/**niveau**/élévation cross-process ; round-trip
+**create_level→read(3→5)→delete_element→read(3)** prouvé ; famille
+**fenêtre présente** (`FamilyTypeId 175114`) → sous-risque env levé ;
+`delete_element` wire `{elementIds:[…]}`, cascade vues/plans.
+**Décision utilisateur** : lacune fenêtre→mur-hôte (pas de `HostId`
+dans le schéma) → **pas de patch C#** ; vérificateur déterministe sur
+seed/S1/S4/S5/S6, **S3 & cs10 claim-graded**. Détail
+`DESIGN-bench-stage2.md` §4bis/4ter. **Vérificateur Stage-2
+FAISABLE.** Prochaine porte = step 2 : binding KG↔ElementId (stack B
+inévaluable sans). Rien facturé, `.rvt` laissé propre.
+
 ## 2026-05-19 (soir, suite 8) — 🧮 MATRICE 17×3 + inspection outils flat : le fossé de confiance, mesuré
 
 Flat × 17 lancé (`--steer flat`, `--snapshot`, build base gelé,

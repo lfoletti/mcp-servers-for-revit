@@ -66,6 +66,44 @@ construction ?* Honnête : **la fiabilité de B est conditionnée à une
 fonctionnalité non encore construite et non prouvée.** Le pilote (§8)
 doit valider le binding AVANT toute matrice.
 
+## 4bis. RÉSULTAT dry-run vérificateur (2026-05-19) + DÉCISION
+
+Probe non facturable (raw socket `ai_element_filter`,
+`filterVisibleInCurrentView:false` = **document-wide**, sans Claude) :
+- ✅ déterministe cross-process : comptes/catégorie, type/classe/
+  famille, **niveau d'un mur** (champ `Level`), élévation, bbox ;
+  « aucun élément » = réponse propre parsable (pas un crash).
+- ⚠️ schéma retourné **sans `Host`/`HostId`** → relation
+  fenêtre→mur-hôte non lisible.
+- **DÉCISION utilisateur 2026-05-19 :** *pas* de patch C# ; vérificateur
+  déterministe sur **comptes/niveau/type/élévation** ⇒ note **seed,
+  S1, S4, S5, S6** déterministe ; **S3 & cs10 = claim-graded**
+  (relation host requise, non lisible) — plus faible pour ces 2,
+  honnête, zéro nouvelle ingénierie. Sous-risque restant à lever au
+  dry-run create-then-read : (i) chemin d'**écriture** create_* en raw
+  socket ; (ii) lisibilité de `sill_height` (S6) via `ai_element_filter`
+  params ; (iii) **prérequis famille fenêtre** chargée dans le `.rvt`
+  (sinon fenêtres non créables — §6).
+
+## 4ter. GATE STEP 1 — PASSÉ (2026-05-19, dry-run create-then-read non facturable)
+
+`ai_element_filter` (lecture, document-wide) + `create_level`/
+`create_*` (écriture) + `delete_element` testés en raw socket, sans
+Claude, sur le `.rvt` live :
+- baseline 3 niveaux → `create_level` 2 → relecture **5** →
+  `delete_element {elementIds:[…]}` → relecture **3** (baseline).
+  **Round-trip create→read→delete→read prouvé.**
+- famille **fenêtre présente** (`FamilyTypeId 175114`, Fenêtres) +
+  19 types de murs → **sous-risque (iii) levé**, pas de setup env
+  fenêtre requis.
+- `delete_element` wire = `{elementIds:[int…]}` ; suppr. d'un niveau
+  **cascade** (vues/plans) — comportement Revit, à modéliser dans
+  S4/cs10.
+- Tout non facturable, `.rvt` laissé propre.
+**⇒ Vérificateur Stage-2 FAISABLE.** Reste la lacune host (S3/cs10
+claim-graded, décidé §4bis). **Prochaine porte = step 2 : binding
+KG↔ElementId** (stack B inévaluable sans, cf. §3).
+
 ## 4. Vérité-terrain & vérificateur (la grosse pièce d'ingénierie neuve)
 
 Vérité = **le `.rvt` réel**, indépendante de l'auto-rapport de A *ou*
