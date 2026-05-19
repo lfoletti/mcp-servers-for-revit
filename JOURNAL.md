@@ -6,6 +6,427 @@ Journal de bord du travail KG. Convention reprise du projet source
 
 ---
 
+## 2026-05-19 (soir, suite 2) — ✅✅ Fix B BUILDÉ, DÉPLOYÉ & VALIDÉ À FROID — bench viable
+
+Patch B-1 (`plugin/Core/SocketService.cs`) buildé sur cette box
+(`dotnet 9.0.302`, `Debug R25`, build minimal §2 BUILD.md) :
+`RevitMCPPlugin` **0 err / 0 warn**, `RevitMCPCommandSet` 0 err (19 warn
+amont pré-existants, hors KG). DLL patchée déployée & horodatée dans
+`%AppData%\…\Addins\2025\revit_mcp_plugin\`. Revit relancé + Switch ON,
+re-sonde à froid (`kg-reset-repro` → `kg-durability-repro`), sans Claude :
+
+| palier | AVANT | APRÈS Fix B |
+|---|---|---|
+| fondation/+1/+5 murs | ✅ durable | ✅ durable |
+| **+14 murs (7-20)** | **120,0 s TIMEOUT, PERDU** (ES 10/12) | **17 ms ✅ durable** (ES 24/40) |
+| +8 fenêtres | 120,0 s TIMEOUT | **21 ms ✅ durable** |
+| seed complet | jamais (ES 10/12) | **ES 32/56 DURABLE** |
+| verdict | 🔴 | ✅ **MÉCANISME SAIN** |
+
+`cacheW == instF == ES` à chaque palier (Fix A tient, 0 régression) ET
+le write qui pendait 120 s & se perdait complète en **17 ms** durable
+(120 000 → 17 ms ≈ ×7000 : ce n'était jamais du travail lent, mais le
+socket C# ne réassemblant pas la requête multi-segments → client en
+attente jusqu'au cap). **Diagnostic confirmé de bout en bout** :
+contention/agent-loop falsifiés ; cause racine = transport entrant C#
+(`SocketService.HandleClientCommunication`, 1 `stream.Read` ≤ 8 KiB
+traité comme requête complète) ; corrigée par accumulation-jusqu'à-
+parsable côté C# seul (B-1), aucun changement de protocole ni des ~30
+autres commandes. Bandeau ✅ du script corrigé (portait l'ancien récit
+« contention/architectural »). **Statut : Fix A + Fix B livrés &
+validés à froid → un run A/B facturable redevient viable** (décision
+utilisateur). Reste : commits (Fix A / Fix B / outillage), puis run A/B.
+
+## 2026-05-19 (soir, suite) — ✅ Fix A LIVRÉ & VÉRIFIÉ À FROID (le mensonge est éliminé)
+
+`service.ts` : nouveau `persistOrEvict(projectId, kg)` (les 4 mutateurs
+y passent ; `mReset` inchangé). Sur throw de `saveProjectKG` →
+`this.instances.delete(pid)` (prochain `getKg` recharge l'ES) + re-lève
+un message sans ambiguïté (« NOT persisted, view invalidated, do NOT
+assume background commit, re-issue smaller »). Commentaire d'en-tête
+faux (lignes ~30) corrigé. `tsc` clean (build via node conda, env sur
+PATH pour le `prebuild` npm imbriqué).
+
+**Re-sonde quiescente (même protocole, sans Claude), preuve directe :**
+
+| palier | cacheW | instF | ES brut | AVANT Fix A | APRÈS Fix A |
+|---|---|---|---|---|---|
+| fondation/+1/+5 murs | =ES | =ES | ok | ✅ durable | ✅ durable (pas de régression) |
+| **+14 murs (timeout 120 s)** | **10/12** | 10/12 | 10/12 | 🔴 `cacheW=24/40` MENT | 🟠 `cacheW=10/12` **== ES** |
+
+La ligne timeout passe de `🔴 CACHE MENT` à `🟠 ES≠attendu` : le cache
+écrivain **ne ment plus** (il recharge l'ES = vérité). Inchangé (=
+Fix B, attendu) : le write +14 timeoute & est PERDU — cause racine
+(transport C#) intacte. Différence : le système ne **ment plus**, il
+remonte une erreur honnête et toute lecture voit la vérité durable.
+Logique de verdict de `kg-durability-repro.mjs` corrigée pour distinguer
+« cache ment » (🔴) de « write perdu mais cache honnête » (🟠) — l'outil
+reste fiable pour valider Fix B. Ajout `kg-reset-repro.mjs` (remet les
+blobs de repro à zéro avant re-test ; blob laissé propre/0 après run).
+**Reste : Fix B (réassemblage socket entrant C#).**
+
+**Fix B SCOPÉ — racine localisée à la ligne près.**
+`plugin/Core/SocketService.cs:167-219` (`HandleClientCommunication`) :
+`byte[8192]` + **un seul** `stream.Read` traité comme une requête
+JSON-RPC complète — aucune boucle d'accumulation, aucun length-prefix,
+aucun délimiteur, plafond 8192 o. TCP est un flux d'octets : une requête
+qui s'étale sur ≥2 segments → 1er `stream.Read` = JSON tronqué →
+`JsonException` → `CreateErrorResponse(null, ParseError,"Invalid JSON")`
+avec **`id:null`**. Le client TS corrèle par `response.id`
+(`SocketClient.ts:81`) → une erreur id-null ne matche aucun callback →
+le Promise pend jusqu'au cap 120 s → write perdu. Asymétrie clé : le
+client TS *entrant* (`SocketClient.ts:42-52 processBuffer`) accumule
+DÉJÀ jusqu'à ce que `JSON.parse` réussisse — d'où grosses *réponses* OK
+mais grosses *requêtes* KO. Une seule cause racine, deux visages.
+
+Options Fix B : **B-1 accumuler-jusqu'à-parsable côté C# uniquement**
+(miroir de ce que fait déjà le TS entrant ; aucun changement TS ni de
+protocole ; bas risque pour les ~30 autres commandes ; garde-fous = cap
+taille max + timeout lecture) — **recommandé pour débloquer** ; **B-2
+framing length-prefixé** (robuste mais TS+C# + TOUS les appelants
+`mcp__revit` → gros blast radius) ; **B-3 writes delta** (sortir du
+whole-blob qui croît avec l'action_log — optionnel, scale, NON requis :
+un blob 32-nœuds bien framé ≈ qq dizaines de Ko, ~20 ms). C# non
+buildable dans l'env conda → patch écrit ici, build/deploy/validate sur
+la box Revit de l'utilisateur (re-sonde `kg-durability-repro.mjs`,
+désormais Fix-A-correcte).
+
+**Fix B B-1 PATCH ÉCRIT (à builder sur la box Revit).**
+`plugin/Core/SocketService.cs` : `HandleClientCommunication` réécrit —
+accumule les octets entrants dans un `MemoryStream`, décode le tampon
+ENTIER (UTF-8 multi-octets peut chevaucher un segment), ne traite que
+quand `IsCompleteJsonRpc` (try-parse `JsonRPCRequest`, miroir de
+`SocketClient.ts processBuffer`) réussit ; reset après réponse (connexion
+persistante). Garde-fous : `ReadTimeout` Infinite si tampon vide (idle,
+ne coupe pas une connexion réutilisée) sinon 30 s (anti half-message
+bloquant) ; cap 32 MiB → erreur propre. Aucun changement du protocole ni
+des ~30 autres commandes. Imports déjà présents. **Non buildable ici
+(conda = node-only).** À faire sur la box : rebuild plugin (BUILD.md) +
+redeploy add-in + redémarrer Revit + Switch, puis `kg-reset-repro.mjs`
+→ `kg-durability-repro.mjs`. Succès attendu = ✅ MÉCANISME SAIN (tous
+paliers durables incl. +14/+8, ES final 32/56, aucun timeout 120 s) →
+run A/B facturable redevient viable.
+
+## 2026-05-19 (soir) — ✅ TEST DÉCISIF TRANCHÉ : PAS la contention — défaut transport C# REPRODUIT À FROID
+
+`server/scripts/kg-durability-repro.mjs` lancé **quiescent** (aucune
+session Claude, aucune dispute de l'idle Revit), sur .rvt **vierge**
+(`[garde] aucun blob — idéal` → zéro risque fixture). Pilote le VRAI
+`KgService`. Seed cumulatif par paliers, 3 lectures/palier :
+
+| palier | write | cacheW | instF (instance neuve ⇒ ES) | ES brut | verdict |
+|---|---|---|---|---|---|
+| fondation (4) | 215 ms | 4/0 | 4/0 | 4/0 | ✅ durable |
+| +1 mur | 19 ms | 5/2 | 5/2 | 5/2 | ✅ durable |
+| +5 murs (2-6) | 16 ms | 10/12 | 10/12 | 10/12 | ✅ durable |
+| **+14 murs (7-20)** | **120,0 s TIMEOUT** | 24/40 | **10/12** | **10/12** | 🔴 CACHE MENT |
+| +8 fenêtres | 120,0 s TIMEOUT | 32/56 | 10/12 | 10/12 | 🔴 |
+| miroir one-shot 28-él. | 17 ms **ERR** (pas TIMEOUT) | qfail | — | — | fast-fail |
+
+**Le pari « contention-driven → mécanisme sain → fix architectural » est
+FALSIFIÉ.** Le timeout 120 s se reproduit **déterministiquement, 100 % à
+froid**, sans Claude ni contention idle. Le seuil n'est PAS la
+contention : c'est la **taille du payload whole-blob** (graphe +
+action_log cumulé). Writes < ~4–8 KiB sérialisé : instantanés &
+durables. Le write 10→24 nœuds (24 n / 40 a + log accumulé) franchit le
+seuil → hang jusqu'au cap socket 120 s → **write PERDU**. Le miroir
+one-shot 28-él. *fast-fail* en 17 ms (`ERR`, pas TIMEOUT) = l'autre face
+du même défaut (single-shot > 8 KiB « Invalid JSON »).
+
+**Cause racine = le défaut classé « secondaire / low-prio / Stage-2 »
+dans `kg-v1-effort.md` ÉTAIT la cause bloquante du bench :** le serveur
+socket **C#** ne réassemble pas une requête entrante multi-segments /
+> ~4–8 KiB. NI la contention, NI le coût d'écriture ES, NI
+l'ordonnancement idle Revit. → branche 🔴 « coût-C#-write / §1 ».
+
+**Impact sur les mesures discutées :**
+- (2) timeout 120→180 s : **RÉFUTÉ empiriquement** — le C# ne réassemble
+  jamais ; pendrait à 180 s et perdrait quand même le write.
+- (1) « ≤ 16 mutations » : plafond réel = **octets sérialisés (~4–8
+  KiB)**, qui *rétrécit* à mesure que le whole-blob (+ action_log)
+  grossit → un cap en nb de mutations est fragile par nature.
+- (3) « fail au timeout » : déjà le comportement (`kg_add_element.ts:78`
+  → `kgError`/`isError`). Le manque réel = Fix A.
+- Mensonge du cache **confirmé à froid** : `cacheW` 24/40 puis 32/56
+  alors que `instF` (instance neuve) recharge correctement 10/12 depuis
+  l'ES. Mécanisme exact = `service.ts:381-401` (transaction commit RAM
+  → `saveProjectKG` throw → cache laissé en avance, epoch non bumpée
+  `service.ts:280-282`). La colonne `instF` **prouve** le Fix A : une
+  instance neuve lit déjà la vérité.
+
+**Fix path re-pointé :**
+1. **Fix A (correctness, inconditionnel, ~2 lignes `service.ts`) :** sur
+   échec/throw `saveProjectKG` → évincer l'entrée cache
+   (`this.instances.delete(pid)`) ⇒ prochain accès recharge l'ES
+   (comportement `instF`). + message d'erreur sans ambiguïté (« NON
+   persisté, vue invalidée, ré-émettre en plus petits lots »).
+2. **Fix B (cause racine, le vrai §1) :** réparer le réassemblage socket
+   entrant **côté C#** (framing length-prefixé / lecture jusqu'à JSON
+   complet). Tant que B n'est pas livré, tout whole-blob > ~4–8 KiB est
+   perdu — **le bench ne peut PAS passer**. Optionnel : sortir du
+   whole-blob (writes delta) pour que le payload ne croisse pas avec
+   l'action_log.
+
+État .rvt : la .rvt active porte maintenant un blob **`Demo-repro`
+(10 n / 12 a)** laissé par la sonde (vierge au départ → pas de restore).
+Ce n'est PAS la fixture `Demo` du bench — rouvrir la .rvt de bench si
+besoin.
+
+## 2026-05-19 — 🔴 DÉFAUT DE BASE : write timeouté = PERDU (pas commité), le système ment
+
+Verdict A/B run 2 (steered + 3 fixes) puis reproduction à froid. **Le run 2
+ne tranche pas §10.6 : comparaison VOID.** PoC a persisté **32 nœuds
+durables** (0 arête — gap prompt symétrique, séparé) ; **V1 = 4 nœuds
+(fondation), le seed s'évapore**. Totaux : V1 tokens +13,6 %, wall ×2,14,
+turns ≈, cost −4,6 % — mais le « moins cher » V1 est un **artefact** (il
+fait moins de vrai travail + scénarios aval vacants), pas une qualité.
+V1 **n'est PAS ≥ PoC** tel qu'architecturé.
+
+**Root cause reproduit à froid (protocole manuel décomposé, vérité =
+`kg_blob_read` brut hors process, pas la narration agent) :**
+- Petits writes (≤ ~15 mutations : fondation 4 ; +1 mur ; +5 murs×3=15) →
+  `success:true` **synchrone**, **durables en ES** (cross-process : ES =
+  6 murs / 12 arêtes / turn 3), **même sous session Claude**.
+- Gros write (~42 mutations : 14 murs×3) sous session Claude →
+  `success:false "Command timed out after 2 minutes: kg_blob_write"` →
+  **ES INCHANGÉ (6/12/turn 3)**. Le write timeouté est **PERDU, PAS
+  commité**. Triple-confirmé (kg-seed-check ×2 + garde de la sonde).
+- **« timeout-but-commits » RÉFUTÉ** (au moins pour le gros write).
+  C'était presque sûrement toujours un faux positif same-process : la
+  mutation est appliquée **en mémoire** (cache KgService) avant le
+  persist ; `kg_query` in-session lit ce cache (montre les nœuds) ; l'ES
+  ne les a jamais ; process neuf → reload ES → disparus. **`kg_query`
+  succès ≠ durable.**
+- Défaut de 2ᵉ ordre : l'agent **hallucine** « ça commit en arrière-plan,
+  keep polling, classic timeout-but-commits » que l'ES brut contredit à
+  plat. Le système **masque** la perte (lore + cache + narration).
+
+**Mécanisme.** `kg_blob_write` C# = whole-blob, sur ExternalEvent à
+l'idle Revit. Quiescent (sondes) : ~23 ms pour 32 nœuds. Sous session
+Claude qui dispute l'idle : un write modéré (~42 mut.) n'obtient pas de
+créneau idle sous le cap socket 120 s → timeout → perdu. Corrélé à
+(taille write × contention live), **pas** aux octets (c'est un *hang*
+120 s, pas le fast-fail « Invalid JSON » ~8 KiB).
+
+**Correction d'honnêteté.** Mon « 120 s = artefact live inoffensif, pas
+un défaut, run 2 sûr » d'il y a plusieurs entrées était **FAUX** : c'est
+une **perte de données + un mensonge système** (memory-ahead-of-ES + lore
++ narration), au-dessus du seuil sous contention. Les sondes offline ne
+pouvaient pas le voir (quiescent + petits payloads) ; le run 2 était
+nécessaire et l'a exposé.
+
+**Ce qui marche (acté) :** fix S4 (reject atomique propre, 0/5 leaké
+vérifié) ; fixes env poc-kg (KG_PYTHON + command node absolu) — PoC run 2
+0 erreur ; scénarios sans gros seed rapides/comparables. **Le mécanisme
+KG est SAIN sous le seuil** (incrémental durable & synchrone même en
+session live) → projet **non condamné**, défaut **localisé**.
+
+**Pending = 1 test décisif non facturable :** `kg-durability-repro.mjs`
+**quiescent** (aucune session Claude) sur .rvt vierge → classe le seuil
+en *contention-driven* (✅ mécanisme sain → fix architectural) vs
+*coût-C#-write* (🔴 §1 en cause). Sondes antérieures (write 32-nœuds
+~23 ms quiescent) prédisent fortement le cas ✅.
+
+**Fix path (3 niveaux), à faire après le test :**
+1. **Correction immédiate :** sur échec/timeout `kg_blob_write`,
+   `KgService` ne doit PAS laisser le cache montrer la mutation comme
+   persistée (rollback mémoire OU marquer dirty + remonter) — **cesser
+   de mentir**.
+2. **Opérationnel :** seed en petits lots réellement commités, chaque
+   lot vérifié en ES, jamais sur la foi du `success` in-process.
+3. **Structurel :** write-behind (journal local = vérité immédiate,
+   checkpoint ES async) — le « best of both worlds ».
+
+État .rvt : blob `Demo` = 10 nœuds (4 fond. + 6 murs), P4 absent.
+Outils ajoutés cette session : `server/scripts/kg-{es-probe,svc-probe,
+seed-check,durability-repro}.mjs`. Fixes : prompts 20_s2 / 40_s4 /
+run_live SUFFIX ; .mcp.json poc-kg KG_PYTHON + 2 profils command→node
+absolu. Reprise demain : voir le bloc « état figé » + commande sonde.
+
+## 2026-05-18 — ✅ MCP `revit · × failed` : `command:"node"` → node conda absolu
+
+Symptôme : Claude Code redémarré hors invite conda → `Project MCP
+(…/profiles/v1-kg/.mcp.json) revit · × failed` (idem poc-kg). Cause
+vérifiée : les 2 `.mcp.json` avaient `"command": "node"` ; or **`node`
+n'est PAS sur le PATH système** (uniquement dans l'env conda `revitmcp`).
+Le run 1 marchait car `run_live.py` était lancé depuis l'invite
+`(revitmcp)` activée (PATH avec node) ; un Claude Code interactif lancé
+ailleurs ne trouve pas `node`. `node --check build/index.js` OK des deux
+côtés → ce n'est PAS un crash de build, juste l'exe introuvable.
+**Correctif** (même classe que le repoint KG_PYTHON, 1 valeur, réversible,
+suivi git) : `command` = chemin absolu
+`C:/Users/lauro/AppData/Local/anaconda3/envs/revitmcp/node.exe` dans
+**v1-kg ET poc-kg** (poc-kg aurait échoué pareil au run 2). JSON
+re-validés, exe vérifié présent ; `_comment` ajouté/maj des deux côtés.
+**Action utilisateur : redémarrer Claude Code (reconnexion MCP) + ré-
+approuver les 2 profils — inerte sans restart**, comme le fix KG_PYTHON.
+
+## 2026-05-18 — ✅ poc-kg débloqué : KG_PYTHON repointé (correctif vérifié)
+
+Le profil **poc-kg** (baseline du run 2) était hard-bloqué : son
+`.mcp.json` `KG_PYTHON` = `…/envs/revitmcp/python.exe` **inexistant**
+(l'env conda `revitmcp` est node-only) → sidecar PoC `spawn ENOENT` → tous
+les `kg_*` PoC morts → A/B du run 2 compromis. Diagnostic empirique (pas
+de devinette) : base anaconda `C:/Users/lauro/AppData/Local/anaconda3/
+python.exe` **existe**, Python 3.12.7, **networkx 3.3 déjà présent**
+(`requirements.txt` = `networkx>=3.0` satisfait, zéro install).
+`poc-kg/.mcp.json` `KG_PYTHON` repointé dessus ; JSON re-validé ;
+`import networkx` OK via cet exe. **Action utilisateur restante :
+redémarrer Claude Code + re-approuver le profil poc-kg (BENCHMARK-v1.md
+§0) — l'édition .mcp.json est inerte jusqu'au restart.** Mémoire
+[[poc-kg-live-sidecar-blocker]] passée à RESOLVED.
+
+## 2026-05-18 — ✅ check seed en 1 commande + fix S4 (correction, non facturable)
+
+Deux livrables non facturables, suite à l'analyse du dump v1 réel
+(`nodes=9 edges=0` = fondation + 5 Level S4).
+
+- **`server/scripts/kg-seed-check.mjs`** (lecture seule, zéro-dep, sans
+  Claude/harness) : `kg_blob_read` live OU `--file <dump>` hors-ligne →
+  escalier de diagnostic : VIDE / FONDATION SEULEMENT / PARTIEL (Wall
+  X/20, Window Y/8) / NŒUDS SANS ARÊTES / ARÊTES PARTIELLES (E/56) /
+  ✅ SEED OK. Juge sur **Wall=20, Window=8, arêtes=56** (les Level
+  cumulés par S4 n'invalident pas — testé : dump connu → « FONDATION
+  SEULEMENT », FAIL exit 1). Exit 0/1/2 → scriptable après chaque run.
+- **Fix `prompts/40_s4.txt`** : l'« invalide » d'origine (`elevation:
+  "abc"`) **n'était PAS rejeté** par le KG. Vérifié dans le cœur :
+  `add_node` (`project-kg.ts:114-158`) ne valide que la **présence des
+  clés** (manquante / inconnue), **jamais le type des valeurs** ; c'est
+  un **port 1:1 de l'upstream** (25/25 cœur iso) → le **PoC gelé se
+  comporte pareil**. Donc S4 ne pouvait observer aucun rollback (le lot
+  commitait légitimement les 5, dont `elevation:"abc"`) — défaut de
+  *prompt* (mismatch prompt↔contrat, même famille que la cause racine
+  `00_seed`), **symétrique PoC/V1**, ni bug V1 ni signal perf. Nouveau
+  S4 : l'élément invalide = un Level **sans `elevation`** (clé requise
+  manquante → `Missing required attrs` → ValueError → rollback atomique
+  réel), instruction explicite de ne pas le « réparer », vérif = compte
+  de Level inchangé. Servi identiquement aux 2 stacks (même schéma
+  vendored) → équitable, comme les fixes précédents.
+
+Rappel inchangé : le bloquant reste **le seed qui sous-persiste** (4
+fondation, 0 mur/fenêtre, 0 arête) à travers les runs ; à trancher par
+un run 2 propre + `kg-seed-check` (PASS = 32/56, sinon où ça cale).
+
+## 2026-05-18 — ✅ 2ᵉ probe : le chemin TS RÉEL est sain — question 120 s CLOSE
+
+Question laissée ouverte par le profil offline tranchée, non facturable.
+`server/scripts/kg-svc-probe.mjs` instancie le **vrai `KgService`** (aucun
+arg ⇒ `SocketKgBlobTransport` + `SocketKgDocStateProvider` via
+`withRevitConnection`/`RevitClientConnection`, mutex global, cache §5,
+queue sérialisée, `BlobKgPersistence`) et rejoue la séquence S1
+(modify 1 attr → diff_since → query) ×8 — **sans Claude, sans MCP, sans
+harness**. Serveur rebuildé d'abord (conda env sur PATH ; le `prebuild`
+`npm run clean` exigeait `npm` résoluble — `tsc` clean).
+
+Résultat (p50 / max, Revit live, chemin de prod complet) :
+
+| op (via KgService.call) | p50 | max |
+|---|---|---|
+| `modify_element` (= l'edit S1, getKg+Tx+save) | **18 ms** | **32 ms** |
+| `diff_since` | 19 ms | 23 ms |
+| `query` | 12 ms | 15 ms |
+
+- `modify` iter1 (cache FROID, inclut `loadProjectKG`/`kg_blob_read`) =
+  **32 ms** ; iter≥2 (chaud) p50 **17 ms** → **le cache §5 TIENT** : nos
+  écritures ES filtrées par nom de Tx ne bumpent pas l'epoch ⇒ **pas de
+  reload full-blob par op** (step 5 validé bout-en-bout dans le vrai
+  service, ce que le 1ᵉʳ probe ne pouvait pas montrer).
+- **Zéro stall 120 s. Max sur 26 `service.call` = 32 ms.**
+
+**Verdict (les 2 probes concordent).** Le chemin TS de prod est aussi
+rapide que le socket brut (dizaines de ms). Le « `kg_modify_element` →
+Command timed out after 2 minutes, commit quand même » documenté
+([[project-demo-kg]]) n'est **PAS un défaut TS/transport/service
+reproductible** : c'est un **artefact de session live** (Revit
+non-quiescent — `ExternalEvent` en contention avec la longue session
+`claude -p`), ni un coût par-op, ni un bug code. Tout le défaut perf v1
+= amplification boucle-agent, désormais traitée par les 3 fixes Étape 2.
+**Run 2 facturable = sûr et fondé.** (Le .rvt porte un blob « es-probe »
++ 2 Level `svcprobe_*` ; `run_live`/protocole reseedent la fondation.)
+
+## 2026-05-18 — ✅ Étape 2 : 3 fixes prompts/steering (anti-amplification), non facturables
+
+Suite au profil offline, les 3 fixes ciblant la racine (amplification
+boucle-agent) sont appliqués. **Aucune source v1 touchée ; aucun run
+facturable.**
+
+- **(a) `prompts/20_s2.txt`** : retrait du « after every edit restate the
+  full current project state » (×10 → 10 `kg_query` 32-noeuds + 10
+  restatements). Remplacé par 1 vérification finale unique (report des
+  hauteurs murs 1-10). Intent du scénario préservé (10 edits séquentiels
+  persistés, correctness toujours scorable). Vérifié : seul `20_s2` portait
+  ce motif — s1 (diff = test correctness légitime), s3 (query), s4 (batch
+  atomique + report unique), s5 (analyse drift), s6 (1 edit bulk + confirm
+  unique) intacts.
+- **(b) `run_live.py` `SUFFIX`** : passé de `{profil}` à
+  `{profil}{seed|edit}`. Le paragraphe lourd « discover schema + bulk
+  ordonné par dépendance » ne va plus que sur le **seed** ; les scénarios
+  edit reçoivent un steering **lean** (peu d'appels, pas de restate
+  gratuit). Classifieur : `"seed" in scen.lower()` → généralise à tous les
+  jeux (`prompts/`, `prompts_bulkN/`, `prompts-probe/`…). `--steer kg-many`
+  inchangé/valide (la classe s'applique dans le profil). Log enrichi
+  `[label] scen (class)`. `py_compile` OK.
+- **(c)** clause documentée ajoutée à TOUS les suffixes `kg`/`kg-many`
+  (seed+edit) : « un write peut signaler un timeout tout en ayant commité :
+  vérifier par UNE query avant de retenter, jamais de retry aveugle » —
+  coupe la classe de tours défensifs sur le faux-négatif documenté
+  ([[project-demo-kg]]). `flat` non touché (couche store_*, baseline).
+
+`BENCHMARK-v1.md` annoté : run 2 = nouveau point de référence des deux
+côtés (prompts servis identiques, A/B équitable), non comparable aux runs
+partiels d'avant-fix ; garder `*-nosteer`. Reste ouvert (non bloquant,
+non facturable) : 2ᵉ probe via le vrai chemin `KgService`/
+`withRevitConnection` pour clore la question du stall ExternalEvent 120 s
+occasionnel (Revit non-quiescent en session live) avant tout run
+facturable — `withRevitConnection` = socket neuve/op (fidèle au probe),
+donc pas un défaut transport persistant ; reste l'hypothèse idle-Revit.
+
+## 2026-05-18 — ✅ PROFIL OFFLINE : l'infra est INNOCENTE, racine = boucle-agent
+
+Étape 1 du hand-off exécutée : micro-probe instrumenté
+`server/scripts/kg-es-probe.mjs` (zéro-dep, droit au socket Revit, **sans
+Claude, sans le harness, sans le serveur TS** — fidèle à la prod :
+`SocketClient.ts:133` envoie aussi un `socket.write(JSON.stringify())`
+non-framé unique). Chronométrage de N a/r isolés + balayage taille + le
+triplet exact d'une mutation v1 à froid. Garde-fou non-destructif (lit le
+blob, refuse un KG tiers sauf `--force`). Demo (661 o, fixture 4-noeuds
+re-seedable) flushée sur accord user (`--force --no-restore`). **Non
+facturable. Aucun run harness lancé.**
+
+Résultat (p50, Revit 2025 live) :
+
+| op | p50 | suspect | verdict |
+|---|---|---|---|
+| `kg_doc_state` (poll §5, chaque getKg) | **13 ms** | #1 | falsifié |
+| `kg_blob_read` (reload cache froid) | **11 ms** | #3 | falsifié |
+| `kg_blob_write` (1 noeud, 1 Tx Revit) | **21 ms** | infra | rapide |
+| `kg_blob_write` k=32 / 4,2 KiB (taille Demo) | **23 ms** | #2 | **plat** vs k=1 (×1,0) → PAS O(graphe) |
+| **triplet v1 (doc_state→read→write, k=32)** | **47 ms** | — | coût infra d'UN tour d'edit |
+
+**Verdict (règle du JOURNAL).** Infra ≈ **17 ms/op** ; borne basse infra
+de tout `10_s1` = 47 ms × 20 tours ≈ **931 ms**. Observé : **597 000 ms**.
+→ l'infra = **~0,16 %** du wall ; les **~99,84 %** = la boucle-agent.
+Suspects #1/#2/#3 (poll §5 / saveSnapshot O(graphe) / reload cache froid)
+**falsifiés**. La racine est le **suspect #4 — amplification boucle-agent** :
+les prompts s1/s2 forcent « restate the full current project state » à
+chaque edit → re-query + raisonnement complets par tour → ~20 tours pour
+1 edit trivial. **Le substrat ES v1 est rapide ; ce n'est PAS un défaut
+perf v1 ni le datum §1.** Ne PAS réécrire l'infra v1.
+
+**Finding secondaire (séparé, priorité basse).** `kg_blob_write` échoue
+côté Revit avec `Invalid JSON` entre **4,2 KiB (k=32, OK)** et **8,2 KiB
+(k=64, ÉCHEC)** : le serveur socket C# ne réassemble PAS une requête
+entrante multi-segment (il parse le 1ᵉʳ segment TCP). Fidèle à la prod
+(même `write()` non-framé). **Sans effet sur le bench 32 noeuds (4,2 KiB) ;
+plafonne l'échelle projet** — item Stage 2 (framing requête entrant
+C#), PAS le bloquant.
+
+**§10.6 recadré.** Le bloquant n'était pas « v1 lent » mais « le harnais
+de bench amplifie 1 edit en 20 tours via un prompt qui force le restate
+complet ». Décision de la suite = **prompts/steering** (réduire le
+restate, borner les tours), pas l'infra — **choix user** (Étape 2). Le
+profil est l'artefact dans `kg-es-probe.mjs` (rejouable, non facturable).
+
 ## 2026-05-18 — ⚠️ DÉFAUT PERF v1 (bloquant §10.6) — hand-off session fraîche
 
 `kg_schema` a débloqué le seed **en live** (`00_seed` err=False, 13
