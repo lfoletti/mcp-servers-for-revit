@@ -6,6 +6,63 @@ Journal de bord du travail KG. Convention reprise du projet source
 
 ---
 
+## 2026-05-19 (soir, suite 6) — ⚖️ NOTATION verify.py : 0 fabrication ; v1 cœur-7 = PoC (juge déterministe) ; limite ES mono-projet actée
+
+Demande : ajouter le verdict claim↔état {correct/fabricated/
+honest_incomplete/indeterminate} du 1er benchmark. Fait, **scopé
+honnêtement**.
+
+**Adaptation (non facturable, validée hors-ligne avant dépense) :**
+`verify.py` **inchangé** (couvre les 17 ; `pick_project` tolère le
+project_id ; forme `.kg.json` compatible). Seul `run_live.py` adapté :
+`read_profile` expose le `command` du `.mcp.json` ; `snapshot_state`
+dumpe l'ES v1 par scénario via `v1_state_dump.mjs` quand pas de
+KG_HOME. Test direct (import + appel, tmp) → snapshot v1 à la forme
+exacte verify.py. Re-run scoré des 2 stacks (`--snapshot`,
+`--timeout 1200`, reset v1/​set), `out/scored-{poc,v1}-{core,bulkN,
+cases,modwhere,wow}`.
+
+**⚠️ 2ᵉ aveu méthodo (lié à la dette mono-projet).** Les snapshots v1
+extra sont **non fidèles** : l'ES v1 = **un seul blob = un seul
+projet** ; `v1_state_dump` lit ce blob unique ; les scénarios extra
+utilisent des `project_id` distincts (`Resume`, `RoomBench20`,
+`Tower`…) que l'agent n'écrit pas toujours sous "Demo" → snapshots
+`cs9_a/b` = 0 nœud, `bulkN n20` bloqué à 11. Donner ça à verify.py
+produirait des `fabricated` **FAUX**. Refusé. **v1 cœur-7** (tout sur
+"Demo", cohérent) reste fidèle ; PoC (sidecar multi-projet, un
+`.kg.json`/projet) entièrement fidèle. → C'est une **limite v1
+substantielle** (l'ES mono-projet ne peut pas supporter le scoring
+par-scénario multi-projet comme le sidecar) ; prolonge la dette
+« whole-blob / mono-projet » (suite 4) — Fix B-3 / ES multi-projet la
+lèverait.
+
+**Résultats verify.py (le vrai juge) :**
+
+| | correct | fabricated | honest_inc | indét | $/correct |
+|---|--:|--:|--:|--:|--:|
+| **PoC — 17 scén.** | **17** | **0** | 0 | 0 | 0.612 |
+| **v1 — cœur-7** | **7** | **0** | 0 | 0 | 0.299 |
+| Face-à-face cœur-7 PoC | 7/7 | 0 | | | 0.321 |
+
+Par scénario : tous `correct` (état pour les BIM-représentables ;
+`claim` pour S3 lecture-seule & S5 honnêteté-drift). **0 fabrication
+des deux côtés.** Sur le set canonique §10.6 (cœur-7), juge
+déterministe : **v1 7/7 correct = PoC 7/7 correct, 0 fabrication, v1
+~7 % moins cher/correct (0.299 vs 0.321 $)**. PoC 17/17 = preuve forte
+que le PoC gelé est correct sur toute la suite.
+
+**VERDICT (niveau de preuve le plus haut atteignable) :**
+- **§10.6 cœur-7 : v1 = PoC en correction (7/7, 0 fabriqué), v1 moins
+  cher — RIGOUREUSEMENT PROUVÉ** (juge claim↔état, plus seulement
+  `err=False`). v1 ≥ PoC confirmé.
+- **v1 extra-10 : non state-scorable** (ES mono-projet, limite
+  documentée — PAS « v1 fabrique »). Correction extra v1 = err=False +
+  parité-par-construction + spot-check exact `wow`/Tower (déjà acté
+  `dcd4533`). PoC extra : 10/10 correct au juge.
+Artefacts gitignored : `out/scored-{poc,v1}-*`,
+`scored-poc-core/verify_report.{json,md}` (PoC 17),
+`scored-v1-core/verify_report.{json,md}` (v1 cœur-7).
+
 ## 2026-05-19 (soir, suite 5) — 🏁 BENCH COMPLÉTÉ (17 scénarios) : v1 ≥ PoC — + aveu méthodo
 
 Extension demandée : passer les 10 scénarios « manquants » (`bulkN` 4,
