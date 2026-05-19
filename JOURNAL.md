@@ -6,6 +6,20 @@ Journal de bord du travail KG. Convention reprise du projet source
 
 ---
 
+## 2026-05-19 (soir, suite 11) — 📋 Stage-2 step-3 DESIGN (non facturable, à valider avant billable)
+
+Push `23c11e2..1d896b5` sur fork (step 1 + binding). Step-3 conçu
+(`DESIGN-bench-stage2.md` §11) : pilote **P1≈S1 / P3≈S3 create-for-real**,
+A=`s2-direct` (KG_BENCH_MODE=flat, répond en interrogeant le modèle
+vivant) vs B=`s2-kg` (kg-many + `kg_bind_revit_id`, répond du KG) ;
+vérificateur `.rvt`-truth via `ai_element_filter` (P1 déterministe,
+P3 claim-graded — host §4bis) ; reset modèle scripté
+(`ai_element_filter`→`delete_element`, prouvé) ; garde-fous MCP +
+probe headless. Décisions ouvertes : lisibilité hauteur mur (bbox vs
+param), reset modèle, pilote=P1+P3 gate. Séquence : profils+scripts
+(non-bill.) → dry-run+probe (non-bill.) → approbations+probe headless
+→ run P1+P3 (billable) → go/no-go matrice. **Rien lancé.**
+
 ## 2026-05-19 (soir, suite 10) — 🔗 Stage-2 step 2 RÉSOLU : `kg_bind_revit_id` livré (TS-only) + §2 binding exposé
 
 Step-2 gate (binding KG↔ElementId, prérequis bloquant de B) tranché.

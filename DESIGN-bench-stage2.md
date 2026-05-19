@@ -198,6 +198,66 @@ agent-choisie non-fixture).
 - Séquencement : après clôture complète du 17×3 (recommandé) vs
   entrelacé.
 
+## 11. STEP-3 — design détaillé du pilote (non facturable ; à valider AVANT tout run billable)
+
+**Scénarios (2, create-for-real, analogues S1/S3) :**
+- **P1 ≈ S1 (what-changed).** Prompt : créer POUR DE VRAI dans Revit
+  N0(0)/N1(3000), type mur GEN_200, 6 murs sur N0 ; puis monter la
+  hauteur du mur #3 de +200 mm ; rapporter exactement ce qui a changé
+  depuis la création initiale, avec comptes.
+- **P3 ≈ S3 (structural query).** Prompt : créer pour de vrai N0,
+  GEN_200, 4 murs sur N0, 4 fenêtres chacune hébergée sur un mur
+  distinct ; puis : quelles fenêtres sur N0 et quel mur héberge
+  chacune ?
+
+**Stacks/profils (les 2 créent du réel ; build v1 courant ; clé serveur
+`revit` ; node conda absolu) :**
+- **A = `profiles/s2-direct`** — `KG_BENCH_MODE=flat` (kg_* NON
+  enregistrés ; outils Revit create/query présents). Steering A :
+  « aucun outil de mémoire-projet ; crée tout POUR DE VRAI dans Revit ;
+  réponds en INTERROGEANT le modèle vivant (`ai_element_filter`/
+  `get_current_view_elements`) ; n'utilise PAS `store_*_data` ».
+  ⚠️ caveat : `store_*_data` techniquement présent (mode flat) → le
+  steering l'interdit ; toute déviation **notée** (même frontière
+  d'interprétation que l'inspection outils flat).
+- **B = `profiles/s2-kg`** — `KG_BENCH_MODE=kg-many` (kg_* incl.
+  `kg_bind_revit_id` + outils Revit create). Steering B : « crée pour
+  de vrai ; pour CHAQUE élément créé, `kg_bind_revit_id(llm_id,
+  ElementId rendu)` + enregistre dans le KG ; réponds depuis le KG
+  (`kg_query`/`kg_diff_since`) ».
+
+**Vérificateur (`.rvt`-truth) — nouveau script borné :** lit après
+chaque scénario via `ai_element_filter` (raw socket, prouvé step 1) :
+P1 **déterministe** (modèle final = 6 murs N0 ; #3 hauteur +200 —
+sous-check à confirmer non facturable : hauteur lisible via bbox-z ou
+params) + le « what-changed » rapporté claim-checké ; P3 **claim-graded**
+(host non lisible, décision §4bis) + part déterministe (comptes 4/4/N0).
+Joint au coût/turns de `run_live`.
+
+**Reset modèle entre scénarios (critique — la géométrie réelle
+s'accumule) :** script non facturable = `ai_element_filter` tous
+OST_Walls/OST_Windows/OST_Levels(hors défauts template)/types créés →
+`delete_element` (prouvé : delete marche + cascade, step 1). Avant
+chaque scénario/profil. B aussi : `kg-reset.mjs` (ES v1) entre
+scénarios ; A (flat) auto-reset `revit-data.db`.
+
+**Préconditions / garde-fous :** Revit + Switch ON + `.rvt` bench
+propre ; créer les 2 `.mcp.json` ; **approbation MCP interactive des 2
+profils** (garde-fou headless récurrent) + **probe headless de-risk** ;
+build courant. Scripts vérificateur + reset-modèle **écrits &
+dry-runnés non facturable AVANT** le run P1/P3 billable.
+
+**Décisions ouvertes (avant billable) :** (i) lisibilité hauteur mur
+pour le vérif P1 (bbox-z vs param) — probe non facturable ; (ii) reset
+modèle = delete scripté (préféré, prouvé) vs nouveau projet vierge/
+scénario ; (iii) pilote = P1+P3 seulement comme gate go/no-go avant
+toute matrice complète.
+
+**Séquence step-3 :** (1) créer profils + scripts vérif/reset
+(non-bill.) → (2) dry-run vérif/reset + probe hauteur (non-bill.) →
+(3) approbations MCP + probe headless (toi + ~0,2 $) → (4) **run P1+P3
+A vs B (billable)** → (5) verdict go/no-go matrice complète.
+
 ## 10. Statut
 
 Design seulement. Rien lancé, rien facturé. Le bench Stage-1 17×3
