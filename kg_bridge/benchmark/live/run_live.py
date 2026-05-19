@@ -37,18 +37,50 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 
-# Steering suffix per profile, so each side actually exercises its own memory
-# layer (the comparison would be meaningless if both used the same tools).
+# Steering suffix per profile AND per scenario class. It is scenario-class
+# aware for two reasons:
+#  - the bulk-seed guidance (discover schema, dependency-ordered bulk
+#    creation) is correct for the SEED but pure token noise on EDIT
+#    scenarios (s1..s6 create nothing) — it used to be glued onto every
+#    edit prompt;
+#  - the offline latency profile (server/scripts/kg-es-probe.mjs, ~47 ms
+#    per cold mutation triplet) proved the s1/s2 blow-up was agent-loop
+#    amplification, NOT ES infra, so edit prompts get LEAN steering: few
+#    tool calls, no gratuitous full-state restatement, plus the documented
+#    "a kg_* write may report a timeout yet have committed" guidance so
+#    the agent verifies-then-stops instead of thrashing on a false
+#    negative.
+# Fairness is unchanged: run_live serves the SAME prompt+suffix to every
+# profile; only the named tool family differs per memory layer.
+_KG_RETRY = (" A write tool may report a timeout yet have committed: "
+             "verify with ONE query before retrying, and never blindly "
+             "retry a write.")
 SUFFIX = {
-    "flat": " (Use the store_* data tools to persist and query project state.)",
-    "kg": " (Use the kg_* tools to record and query project state.)",
-    "kg-many": " (Use the kg_* tools to record and query project state. "
-               "FIRST discover each element type's exact required/optional "
-               "attributes (use a schema tool if one is available) so "
-               "items validate. Then persist in a FEW bulk calls — many "
-               "elements per call, ordered by dependency (types & levels "
-               "first, then walls, then windows that reference those "
-               "walls) — never one call per element.)",
+    "flat": {
+        "seed": " (Use the store_* data tools to persist and query project state.)",
+        "edit": " (Use the store_* data tools to persist and query project state.)",
+    },
+    "kg": {
+        "seed": " (Use the kg_* tools to record and query project state."
+                + _KG_RETRY + ")",
+        "edit": " (Use the kg_* tools to record and query project state. "
+                "Make as few tool calls as possible and do not restate the "
+                "full project unless explicitly asked." + _KG_RETRY + ")",
+    },
+    "kg-many": {
+        "seed": " (Use the kg_* tools to record and query project state. "
+                "FIRST discover each element type's exact required/optional "
+                "attributes (use a schema tool if one is available) so "
+                "items validate. Then persist in a FEW bulk calls — many "
+                "elements per call, ordered by dependency (types & levels "
+                "first, then walls, then windows that reference those "
+                "walls) — never one call per element." + _KG_RETRY + ")",
+        "edit": " (Use the kg_* tools to record and query project state. "
+                "Batch independent changes into one call where the tool "
+                "allows; make as few tool calls as possible and do not "
+                "restate the full project unless explicitly asked."
+                + _KG_RETRY + ")",
+    },
 }
 
 # Pairs to report ratios for, when both profiles are present.
@@ -75,6 +107,9 @@ def read_profile(dir_: Path) -> dict:
         "kg_home": env.get("KG_HOME"),
         "sqlite_db": str(server_dir / "revit-data.db"),
         "mode": env.get("KG_BENCH_MODE", "?"),
+        # v1/ES stack has no KG_HOME (the KG lives in the .rvt ES); the
+        # .mcp.json `command` (the node binary) lets --snapshot dump it.
+        "command": srv.get("command"),
     }
 
 
@@ -110,6 +145,23 @@ def snapshot_state(profile: dict, out_dir: Path, scen: str,
                 shutil.copy2(f, kdst / f.name)
             except OSError:
                 pass
+    cmd = profile.get("command")
+    if (not kgh) and cmd:
+        # v1/ES stack: no KG_HOME on disk — the KG lives in the .rvt
+        # ExtensibleStorage. Dump it via the same socket v1_state_dump
+        # uses, into the snapshot kg/ dir, in the exact PoC .kg.json
+        # shape verify.py reads ({project_id, nodes, action_log, ...}).
+        # Best-effort, like the copies above.
+        kdst = dest / "kg"
+        kdst.mkdir(exist_ok=True)
+        try:
+            subprocess.run(
+                [cmd, str(HERE / "v1_state_dump.mjs"), "8080",
+                 str(kdst / "v1_state.kg.json")],
+                capture_output=True, text=True, timeout=120,
+            )
+        except (OSError, subprocess.SubprocessError):
+            pass
     db = profile.get("sqlite_db")
     if db and Path(db).exists():
         try:
@@ -209,11 +261,13 @@ def main() -> int:
     ap.add_argument("--no-reset", action="store_true",
                     help="do not wipe KG_HOME / revit-data.db before each profile")
     ap.add_argument("--steer", choices=["flat", "kg", "kg-many"], default=None,
-                    help="override the per-prompt steering SUFFIX for ALL "
-                         "profiles (default: per-slot label). Use 'kg-many' "
-                         "to benchmark the SHIPPED claude-in-revit bulk "
-                         "policy (prefer *_many) — required for a faithful "
-                         "v1-vs-PoC A/B (étape 6, cf. BENCHMARK-v1.md).")
+                    help="override the per-prompt steering SUFFIX profile "
+                         "for ALL profiles (default: per-slot label). The "
+                         "seed-vs-edit scenario class still selects the "
+                         "heavy/lean variant within the chosen profile. Use "
+                         "'kg-many' to benchmark the SHIPPED claude-in-revit "
+                         "bulk policy (prefer *_many) — required for a "
+                         "faithful v1-vs-PoC A/B (étape 6, BENCHMARK-v1.md).")
     ap.add_argument("--yes", action="store_true",
                     help="required: confirms you accept REAL billable API calls")
     args = ap.parse_args()
@@ -255,9 +309,15 @@ def main() -> int:
                 label, cleared or "(nothing to clear)"))
         for pf in prompts:
             scen = pf.stem
+            # Seed scenarios (00_seed, *_seed_*) get the heavy discover+bulk
+            # steering; everything else (edits/queries/analysis) gets the
+            # lean variant. Generalizes across all prompt sets (prompts/,
+            # prompts_bulkN/, prompts-probe/, ...).
+            scen_class = "seed" if "seed" in scen.lower() else "edit"
             prompt = pf.read_text(encoding="utf-8").strip() + \
-                SUFFIX[args.steer or label]
-            print("[{}] {} ...".format(label, scen), flush=True)
+                SUFFIX[args.steer or label][scen_class]
+            print("[{}] {} ({}) ...".format(label, scen, scen_class),
+                  flush=True)
             m = run_one(args.claude, prof["dir"], prompt,
                         args.max_turns, args.timeout)
             if args.snapshot:
