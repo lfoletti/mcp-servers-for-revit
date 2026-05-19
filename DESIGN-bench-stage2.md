@@ -258,8 +258,23 @@ non-protégés → `delete_element`, retour baseline {Walls:0,Levels:3}).
 Livré non facturable : `profiles/s2-direct` + `profiles/s2-kg`
 `.mcp.json` ; `kg_bridge/benchmark/stage2/verify_rvt.mjs` (lecteur
 .rvt-truth déterministe) ; `server/scripts/kg-rvt-reset.mjs`.
-**Reste avant billable : ③ approbations MCP des 2 profils + probe
-headless ; puis ④ run P1+P3.**
+**Archive `.rvt` par scénario (demande utilisateur) — PROUVÉ non
+facturable :** pas de commande `save` ⇒ via `send_code_to_revit`
+(template `Execute(Document document, object[] parameters)`, `return`
+sérialisé JSON, `transactionMode:"none"`). Le doc ouvert était
+**`Projet1` non sauvé** (`path=""`) ⇒ `document.Save()` impossible.
+**Résolu** : `SaveAs` scripté unique → `kg_bridge/benchmark/live/out/
+stage2/stage2-bench.rvt` (dans `out/` gitignored). End-to-end validé :
+`SaveAs` ok → `Save()` ok → **copie fichier du `.rvt` ouvert ok**
+(5,85 Mo, pas de verrou). Séquence/scénario : build → `verify_rvt`
+→ `send_code document.Save()` → copie `stage2-bench.rvt` vers
+`out/stage2/<scén>__<profil>.rvt` → `kg-rvt-reset` (B aussi
+`kg-reset.mjs`).
+
+**③ approbations MCP s2-direct/s2-kg : FAITES (utilisateur « s2
+approuvés »).** Reste avant billable : **probe headless de-risk** des
+2 profils ; puis **④ run P1+P3** avec la séquence/scénario ci-dessus
+(runner Stage-2 dédié à écrire, non facturable).
 
 **Séquence step-3 :** (1) créer profils + scripts vérif/reset
 (non-bill.) → (2) dry-run vérif/reset + probe hauteur (non-bill.) →
