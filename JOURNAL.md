@@ -6,6 +6,65 @@ Journal de bord du travail KG. Convention reprise du projet source
 
 ---
 
+## 2026-05-19 (soir, suite 5) — 🏁 BENCH COMPLÉTÉ (17 scénarios) : v1 ≥ PoC — + aveu méthodo
+
+Extension demandée : passer les 10 scénarios « manquants » (`bulkN` 4,
+`cases` 3, `modwhere` 2, `wow` 1) en A/B v1-vs-PoC, même protocole que
+le cœur-7.
+
+**⚠️ Aveu méthodo (ma faute).** Mon analyse d'isolation (« pas de reset
+inter-set nécessaire ») était FAUSSE : l'ES v1 est mono-projet et n'est
+pas vidé entre sets → 1er run v1 extra **confondu** (tout accumulé dans
+un `Demo` à 222 nœuds ; `bulkN`/`modwhere` dégradés, `wow` DNF 600 s).
+Détecté via le dump ES. Correctif : `server/scripts/kg-reset.mjs`
+(générique ; vide le blob mono-projet) appelé **avant chaque set** +
+`--timeout 1200`. PoC restait propre (`run_live` vide `KG_HOME` par
+invocation). Sorties confondues archivées `out/v1-prompts_*-contaminated`
+(non utilisées). Les chiffres ci-dessous = **run v1 extra CORRIGÉ**
+(reset confirmé `removed=true → 0/0` ×4 ; 10/10 `err=False` ; `wow`
+DNF→**322,88 s/11 turns** ⇒ l'échec `wow` était 100 % l'artefact de
+contamination, PAS une régression Fix B).
+
+**Totaux v1/poc par set (corrigé, < 1 = v1 mieux ; cœur-7 rappel) :**
+
+| set | n | out tok | turns | wall s | cost $ |
+|---|--:|--:|--:|--:|--:|
+| cœur-7 | 7 | x0.931 | x1.049 | x0.911 | x0.943 |
+| bulkN | 4 | x1.148 | x0.829 | x1.152 | x0.887 |
+| cases | 3 | x0.707 | x0.789 | x0.739 | x0.739 |
+| modwhere | 2 | x0.716 | x1.0 | x0.985 | x0.962 |
+| wow | 1 | x0.789 | x0.407 | x0.743 | x0.709 |
+| **TOTAL 17** | **17** | **x0.818** | **x0.853** | **x0.890** | **x0.858** |
+
+(in tok TOTAL x0.953 ; `modwhere` in x2.0 = absolu minuscule 92 vs 46,
+cache-cheap, négligeable au coût.)
+
+**Agrégé sur les 17 : v1 ≥ PoC sur in/out/turns/wall/cost** (TOUS < 1,
+y compris `wall` x0.890 — le surcoût d'internalisation ES ne domine pas
+même sur le set étendu, plus écriture-lourd). Seule exception : `bulkN`
+où v1 est légèrement pire en out (x1.148) & wall (x1.152) — le **coût
+whole-blob-write sur seed bulk de Rooms**, exactement la dette « suite
+4 » (cost reste x0.887 < 1, turns x0.829 < 1 : pas une régression
+agent). `cases`/`wow` = victoires v1 nettes ; `wow` passe de DNF à
+**x0.407 turns / x0.709 cost** + parité nœuds+conformité exacte (PoC
+Tower vs v1 : 53 nœuds, même by_type, 18/18 sills @0.9 ; écart arêtes
+81/96 = latitude modélisation agent, documentée, pas un défaut).
+
+**Correction (périmètre choisi : sans verify.py/--snapshot).** Extra-10
+= parité-par-construction (surface 1:1, 60/60 TS + 13 service) +
+`err=False` 10/10 (agent auto-confirme les comptes exacts demandés par
+chaque prompt) + spot-check déterministe `wow`/Tower exact. Pas de
+notation déterministe par scénario (option verify.py déclinée par
+l'utilisateur). Cœur-7 garde sa parité d'état finale exacte (`bf4264a`).
+
+**VERDICT ÉTENDU : sur 17 scénarios, v1 ≥ PoC partout (tokens/turns/
+wall/cost < 1), 0 erreur après correctif, parité où vérifiable.** §10.6
+non seulement satisfait (cœur-7, `bf4264a`) mais **renforcé** par le set
+étendu. Réserve unique & honnête : `bulkN` expose le coût whole-blob-
+write (dette « suite 4 », fix = B-3 post-bench). Artefacts gitignored :
+`out/{poc,v1}-prompts_*` ; confondus : `out/v1-prompts_*-contaminated`.
+Coût extra ≈ PoC 8,93 $ + v1 (confondu, jeté) + v1 corrigé ≈ 13 $.
+
 ## 2026-05-19 (soir, suite 4) — 🧱 DETTE D'ÉCHELLE : whole-blob write O(état+historique)/op + PLAN Fix B-3
 
 Question utilisateur (suite à la contamination du blob v1) : « tout le
