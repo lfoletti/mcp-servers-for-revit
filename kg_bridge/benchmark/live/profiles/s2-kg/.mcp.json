@@ -1,0 +1,14 @@
+{
+  "_comment": "Stage-2 stack B = Revit + internal KG. CURRENT v1 build, KG_BENCH_MODE=kg-many => kg_* present (incl. the new kg_bind_revit_id) ALONGSIDE the Revit create/query commands. The agent builds for real in Revit, binds each created element into the KG (kg_bind_revit_id with the returned ElementId) and answers from the KG (kg_query/kg_diff_since). 'command' is the ABSOLUTE conda 'revitmcp' node.exe. New profile dir => one-time Claude Code MCP approval + headless probe before any billable run.",
+  "mcpServers": {
+    "revit": {
+      "command": "C:/Users/lauro/AppData/Local/anaconda3/envs/revitmcp/node.exe",
+      "args": [
+        "C:/Users/lauro/Documents/IT/mcp-servers-for-revit-kg-poc/server/build/index.js"
+      ],
+      "env": {
+        "KG_BENCH_MODE": "kg-many"
+      }
+    }
+  }
+}

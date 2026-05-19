@@ -247,11 +247,19 @@ profils** (garde-fou headless récurrent) + **probe headless de-risk** ;
 build courant. Scripts vérificateur + reset-modèle **écrits &
 dry-runnés non facturable AVANT** le run P1/P3 billable.
 
-**Décisions ouvertes (avant billable) :** (i) lisibilité hauteur mur
-pour le vérif P1 (bbox-z vs param) — probe non facturable ; (ii) reset
-modèle = delete scripté (préféré, prouvé) vs nouveau projet vierge/
-scénario ; (iii) pilote = P1+P3 seulement comme gate go/no-go avant
-toute matrice complète.
+**Décisions — RÉSOLUES (2026-05-19, setup ①+② non facturable) :**
+(i) ✅ hauteur mur **lisible déterministe via bbox-z** (test : créé
+2700 → lu 2700 exact) ; mur→`Level` aussi lu ; `create_line_based_
+element` rend l'**ElementId** (Response:[255043]) → flux B
+`create→kg_bind_revit_id` validé. (ii) ✅ reset modèle = **delete
+scripté** (`kg-rvt-reset.mjs` prouvé : Walls/Windows/Doors + levels
+non-protégés → `delete_element`, retour baseline {Walls:0,Levels:3}).
+(iii) pilote = **P1+P3** comme gate go/no-go (retenu).
+Livré non facturable : `profiles/s2-direct` + `profiles/s2-kg`
+`.mcp.json` ; `kg_bridge/benchmark/stage2/verify_rvt.mjs` (lecteur
+.rvt-truth déterministe) ; `server/scripts/kg-rvt-reset.mjs`.
+**Reste avant billable : ③ approbations MCP des 2 profils + probe
+headless ; puis ④ run P1+P3.**
 
 **Séquence step-3 :** (1) créer profils + scripts vérif/reset
 (non-bill.) → (2) dry-run vérif/reset + probe hauteur (non-bill.) →

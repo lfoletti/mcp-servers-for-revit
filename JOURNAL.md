@@ -6,6 +6,22 @@ Journal de bord du travail KG. Convention reprise du projet source
 
 ---
 
+## 2026-05-19 (soir, suite 12) — 🛠️ Stage-2 step-3 setup ①+② FAIT & VERT (non facturable)
+
+Livré : `profiles/s2-direct` (flat/no-kg) + `profiles/s2-kg`
+(kg-many+`kg_bind_revit_id`) `.mcp.json` ; `kg_bridge/benchmark/
+stage2/verify_rvt.mjs` (lecteur `.rvt`-truth déterministe : comptes/
+niveau/**hauteur** via bbox-z) ; `server/scripts/kg-rvt-reset.mjs`
+(reset modèle, protège "Niveau 0/1/2"). Dry-run raw-socket sans Claude :
+`create_level`+`create_line_based_element {data:[…]}` OK, **create
+rend l'ElementId** (`Response:[255043]` → flux B `create→
+kg_bind_revit_id` validé) ; `readTruth` lit mur→`Level` + `height
+2700` exact ⇒ **décision (1) RÉSOLUE : hauteur lisible bbox-z** ;
+`kg-rvt-reset` ramène à baseline {Walls:0,Levels:3} ⇒ **décision (2)
+RÉSOLUE : reset scripté prouvé**. Pilote = P1+P3 (déc. 3). Tout non
+facturable, `.rvt` propre. **Reste : ③ approbations MCP s2-direct/
+s2-kg + probe headless ; ④ run P1+P3 (billable).**
+
 ## 2026-05-19 (soir, suite 11) — 📋 Stage-2 step-3 DESIGN (non facturable, à valider avant billable)
 
 Push `23c11e2..1d896b5` sur fork (step 1 + binding). Step-3 conçu
