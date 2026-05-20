@@ -110,6 +110,10 @@ def read_profile(dir_: Path) -> dict:
         # v1/ES stack has no KG_HOME (the KG lives in the .rvt ES); the
         # .mcp.json `command` (the node binary) lets --snapshot dump it.
         "command": srv.get("command"),
+        # v2-kg stack C : KG_BENCH_MODE=flat (v1 tools muted) + KG_V2_TOOLS=on
+        # (C# projection commands kg_v2_*). Snapshot reads via the v2 read
+        # API, NOT the v1 blob — different code path from mode=='kg'.
+        "kg_v2_tools": env.get("KG_V2_TOOLS", "").lower(),
     }
 
 
@@ -147,6 +151,8 @@ def snapshot_state(profile: dict, out_dir: Path, scen: str,
                 pass
     cmd = profile.get("command")
     mode = profile.get("mode")
+    v2tools = profile.get("kg_v2_tools", "")
+    v2_active = v2tools in ("on", "1", "true", "yes")
     if (not kgh) and cmd and mode in ("kg", "kg-many"):
         # v1/ES stack: no KG_HOME on disk AND a KG mode => the KG lives
         # in the .rvt ExtensibleStorage. Dump it via the same socket
@@ -162,6 +168,23 @@ def snapshot_state(profile: dict, out_dir: Path, scen: str,
             subprocess.run(
                 [cmd, str(HERE / "v1_state_dump.mjs"), "8080",
                  str(kdst / "v1_state.kg.json")],
+                capture_output=True, text=True, timeout=120,
+            )
+        except (OSError, subprocess.SubprocessError):
+            pass
+    elif (not kgh) and cmd and mode == "flat" and v2_active:
+        # v2-kg stack C : v1 tools muted (KG_BENCH_MODE=flat) BUT the
+        # KG v2 projection is alive in Revit. Dump via the v2 read API
+        # (kg_session_info + kg_query + kg_diff_since) translated to the
+        # v1-compat .kg.json shape verify.py reads. Cohabite with the
+        # FLAT SQLite copy below (which is empty unless store_*_data was
+        # used — non-default for stack C).
+        kdst = dest / "kg"
+        kdst.mkdir(exist_ok=True)
+        try:
+            subprocess.run(
+                [cmd, str(HERE / "v2_state_dump.mjs"), "8080",
+                 str(kdst / "v2_state.kg.json")],
                 capture_output=True, text=True, timeout=120,
             )
         except (OSError, subprocess.SubprocessError):
