@@ -16,6 +16,7 @@ namespace RevitMCPKgCommandSet.Core
         private readonly Dictionary<string, int> _counters = new Dictionary<string, int>();
 
         private int _turn;
+        private IDeltaSink _sink;
 
         public ProjectKg(string projectId)
         {
@@ -26,7 +27,15 @@ namespace RevitMCPKgCommandSet.Core
 
         public int Turn => _turn;
 
-        public int AdvanceTurn() => ++_turn;
+        public void AttachSink(IDeltaSink sink) => _sink = sink;
+        public void DetachSink() => _sink = null;
+
+        public int AdvanceTurn()
+        {
+            _turn++;
+            _sink?.Emit(new DeltaEntry { Turn = _turn, Op = DeltaOps.AdvanceTurn });
+            return _turn;
+        }
 
         public int NodeCount => _nodes.Count;
         public int EdgeCount => _edges.Count;
@@ -99,6 +108,15 @@ namespace RevitMCPKgCommandSet.Core
                 }));
             }
 
+            _sink?.Emit(new DeltaEntry
+            {
+                Turn = _turn,
+                Op = DeltaOps.CreateNode,
+                Id = llmId,
+                NodeType = nodeType,
+                Attrs = new Dictionary<string, object>(attrs),
+            });
+
             return llmId;
         }
 
@@ -132,6 +150,14 @@ namespace RevitMCPKgCommandSet.Core
                 ["before"] = before,
                 ["after"] = new Dictionary<string, object>(updates),
             }));
+
+            _sink?.Emit(new DeltaEntry
+            {
+                Turn = _turn,
+                Op = DeltaOps.ModifyNode,
+                Id = llmId,
+                Updates = new Dictionary<string, object>(updates),
+            });
         }
 
         public void SoftDelete(string llmId)
@@ -142,6 +168,8 @@ namespace RevitMCPKgCommandSet.Core
 
             node.Attrs[LifecycleAttrs.DeletedAt] = _turn;
             _actionLog.Add(new ActionLogEntry(_turn, "delete", llmId, new Dictionary<string, object>()));
+
+            _sink?.Emit(new DeltaEntry { Turn = _turn, Op = DeltaOps.SoftDelete, Id = llmId });
         }
 
         public void SetRevitId(string llmId, long revitId)
@@ -149,6 +177,7 @@ namespace RevitMCPKgCommandSet.Core
             if (!_nodes.TryGetValue(llmId, out var node))
                 throw new KeyNotFoundException(llmId);
             node.Attrs[LifecycleAttrs.RevitId] = revitId;
+            _sink?.Emit(new DeltaEntry { Turn = _turn, Op = DeltaOps.SetRevitId, Id = llmId, RevitId = revitId });
         }
 
         public string FindByRevitId(long revitId)
@@ -177,6 +206,16 @@ namespace RevitMCPKgCommandSet.Core
             outSet.Add(key);
             if (!_incoming.TryGetValue(dst, out var inSet)) _incoming[dst] = inSet = new HashSet<EdgeKey>();
             inSet.Add(key);
+
+            _sink?.Emit(new DeltaEntry
+            {
+                Turn = _turn,
+                Op = DeltaOps.AddEdge,
+                Src = src,
+                Dst = dst,
+                EdgeType = edgeType,
+                Attrs = attrs != null ? new Dictionary<string, object>(attrs) : null,
+            });
             return true;
         }
 
@@ -186,6 +225,15 @@ namespace RevitMCPKgCommandSet.Core
             if (!_edges.Remove(key)) return false;
             if (_outgoing.TryGetValue(src, out var outSet)) outSet.Remove(key);
             if (_incoming.TryGetValue(dst, out var inSet)) inSet.Remove(key);
+
+            _sink?.Emit(new DeltaEntry
+            {
+                Turn = _turn,
+                Op = DeltaOps.RemoveEdge,
+                Src = src,
+                Dst = dst,
+                EdgeType = edgeType,
+            });
             return true;
         }
 
