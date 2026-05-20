@@ -7,6 +7,7 @@ namespace RevitMCPKgCommandSet.Core
         public const string CreateNode = "create_node";
         public const string ModifyNode = "modify_node";
         public const string SoftDelete = "soft_delete";
+        public const string Resurrect = "resurrect";
         public const string SetRevitId = "set_revit_id";
         public const string AddEdge = "add_edge";
         public const string RemoveEdge = "remove_edge";

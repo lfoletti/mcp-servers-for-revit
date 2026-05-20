@@ -319,5 +319,60 @@ namespace RevitMCPKgCommandSet.Tests
 
             Assert.Equal(0, sink2.Count);
         }
+
+        // ---- resurrect (P3 undo/redo robustness) ----
+
+        [Fact]
+        public void Resurrect_emits_resurrect_entry_and_clears_tombstone()
+        {
+            var kg = new ProjectKg("p1");
+            kg.AddNode("Level", LevelAttrs(), llmId: "lvl");
+            kg.SoftDelete("lvl");
+            Assert.True(kg.GetNode("lvl").IsSoftDeleted);
+
+            var sink = new MemoryDeltaSink();
+            kg.AttachSink(sink);
+            kg.Resurrect("lvl");
+
+            Assert.False(kg.GetNode("lvl").IsSoftDeleted);
+            Assert.Single(sink.Entries);
+            Assert.Equal(DeltaOps.Resurrect, sink.Entries[0].Op);
+            Assert.Equal("lvl", sink.Entries[0].Id);
+        }
+
+        [Fact]
+        public void Resurrect_on_live_node_is_noop()
+        {
+            var kg = new ProjectKg("p1");
+            kg.AddNode("Level", LevelAttrs(), llmId: "lvl");
+            var sink = new MemoryDeltaSink();
+            kg.AttachSink(sink);
+
+            kg.Resurrect("lvl");
+
+            Assert.Equal(0, sink.Count);
+        }
+
+        [Fact]
+        public void Replay_handles_create_delete_resurrect_sequence()
+        {
+            var kg1 = new ProjectKg("p1");
+            var sink = new MemoryDeltaSink();
+            kg1.AttachSink(sink);
+            kg1.AdvanceTurn();
+            kg1.AddNode("Level", LevelAttrs(), llmId: "lvl");
+            kg1.AdvanceTurn();
+            kg1.SoftDelete("lvl");
+            kg1.AdvanceTurn();
+            kg1.Resurrect("lvl");
+
+            var jsonl = JsonlSerializer.SerializeAll(sink.Entries);
+            var parsed = JsonlSerializer.DeserializeAll(jsonl);
+            var (kg2, stats) = ProjectKgReplay.Replay("p1", parsed);
+
+            Assert.Equal(0, stats.Skipped);
+            Assert.Equal(1, kg2.NodeCount);
+            Assert.False(kg2.GetNode("lvl").IsSoftDeleted);
+        }
     }
 }

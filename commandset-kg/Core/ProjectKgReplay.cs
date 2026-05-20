@@ -56,6 +56,9 @@ namespace RevitMCPKgCommandSet.Core
                 case DeltaOps.SoftDelete:
                     kg.SoftDelete(e.Id);
                     break;
+                case DeltaOps.Resurrect:
+                    kg.Resurrect(e.Id);
+                    break;
                 case DeltaOps.SetRevitId:
                     if (e.RevitId.HasValue) kg.SetRevitId(e.Id, e.RevitId.Value);
                     break;

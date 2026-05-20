@@ -261,5 +261,127 @@ namespace RevitMCPKgCommandSet.Tests
             Assert.Equal(0, stats.NodesAffected);
             Assert.Equal(1, stats.Skipped);
         }
+
+        // ---- undo/redo robustness (P3) ----
+
+        [Fact]
+        public void ApplyAdded_resurrects_soft_deleted_node_by_revit_id()
+        {
+            // Scenario: Ctrl+Z on a delete. Revit re-creates the element with
+            // the same ElementId; the projection must preserve llm_id and
+            // not forge a duplicate.
+            var kg = new ProjectKg("p1");
+            var fake = new FakeElementReader();
+            fake.AddLevel(1001, "N0", 0.0);
+            Projection.ApplyAdded(kg, fake, new long[] { 1001 });
+            var originalLlmId = kg.FindByRevitId(1001);
+            Projection.ApplyDeleted(kg, new long[] { 1001 });
+            Assert.True(kg.GetNode(originalLlmId).IsSoftDeleted);
+
+            var stats = Projection.ApplyAdded(kg, fake, new long[] { 1001 });
+
+            Assert.Equal(1, stats.NodesAffected);
+            Assert.Equal(0, stats.Skipped);
+            Assert.Equal(1, kg.NodeCount);
+            Assert.Equal(originalLlmId, kg.FindByRevitId(1001));
+            Assert.False(kg.GetNode(originalLlmId).IsSoftDeleted);
+        }
+
+        [Fact]
+        public void ApplyAdded_resurrect_syncs_attrs_changed_since_tombstone()
+        {
+            // Scenario: redo path where Revit re-creates the element with
+            // updated attrs (e.g. Ctrl+Y after attrs changed between
+            // delete and re-create).
+            var kg = new ProjectKg("p1");
+            var fake = new FakeElementReader();
+            fake.AddLevel(1001, "N0", 0.0);
+            Projection.ApplyAdded(kg, fake, new long[] { 1001 });
+            Projection.ApplyDeleted(kg, new long[] { 1001 });
+
+            fake.Attrs[1001]["elevation"] = 3.5;
+            kg.AdvanceTurn();
+            Projection.ApplyAdded(kg, fake, new long[] { 1001 });
+
+            var llmId = kg.FindByRevitId(1001);
+            Assert.False(kg.GetNode(llmId).IsSoftDeleted);
+            Assert.Equal(3.5, kg.GetNode(llmId).Attrs["elevation"]);
+        }
+
+        [Fact]
+        public void ApplyAdded_resurrect_repatches_f1_edges()
+        {
+            // Scenario: a wall was hosted on level N0, deleted, then re-created
+            // by undo while pointing at a different level. Edges must reflect
+            // the current state, not the stale tombstone.
+            var kg = new ProjectKg("p1");
+            var fake = new FakeElementReader();
+            fake.AddLevel(1001, "N0", 0.0);
+            fake.AddLevel(1002, "N1", 3.0);
+            fake.AddWallType(2001, "WT200", 0.2);
+            fake.AddWall(3001, levelEid: 1001, wallTypeEid: 2001,
+                p1: new[] { 0.0, 0.0 }, p2: new[] { 5.0, 0.0 }, length: 5.0, height: 3.0);
+            Projection.ApplyAdded(kg, fake, new long[] { 1001, 1002, 2001, 3001 });
+
+            var wallLlmId = kg.FindByRevitId(3001);
+            Projection.ApplyDeleted(kg, new long[] { 3001 });
+
+            // Wall comes back, now at N1.
+            fake.Attrs[3001]["level_ref"] = "level_revit_1002";
+            fake.Edges[3001] = new List<EdgeSpec>
+            {
+                new EdgeSpec(1002, EdgeTypes.AtLevel),
+                new EdgeSpec(2001, EdgeTypes.IsType),
+            };
+            kg.AdvanceTurn();
+            Projection.ApplyAdded(kg, fake, new long[] { 3001 });
+
+            Assert.Equal(wallLlmId, kg.FindByRevitId(3001));
+            Assert.False(kg.GetNode(wallLlmId).IsSoftDeleted);
+            var atLevels = kg.OutgoingEdges(wallLlmId, EdgeTypes.AtLevel).ToList();
+            Assert.Single(atLevels);
+            Assert.Equal(kg.FindByRevitId(1002), atLevels[0].Dst);
+        }
+
+        [Fact]
+        public void ApplyAdded_undo_redo_cycle_keeps_single_node()
+        {
+            // Three full cycles of create→delete→resurrect. Node count and
+            // llm_id must stay stable.
+            var kg = new ProjectKg("p1");
+            var fake = new FakeElementReader();
+            fake.AddLevel(1001, "N0", 0.0);
+            Projection.ApplyAdded(kg, fake, new long[] { 1001 });
+            var llmId = kg.FindByRevitId(1001);
+
+            for (int i = 0; i < 3; i++)
+            {
+                Projection.ApplyDeleted(kg, new long[] { 1001 });
+                Assert.True(kg.GetNode(llmId).IsSoftDeleted);
+                Projection.ApplyAdded(kg, fake, new long[] { 1001 });
+                Assert.False(kg.GetNode(llmId).IsSoftDeleted);
+            }
+
+            Assert.Equal(1, kg.NodeCount);
+            Assert.Equal(llmId, kg.FindByRevitId(1001));
+        }
+
+        [Fact]
+        public void ApplyAdded_skips_when_live_node_with_same_revit_id_exists()
+        {
+            // Defensive: Revit doesn't reuse live ElementIds, but the
+            // projection must refuse a duplicate-add silently rather than
+            // forge a second node bound to the same revit_id.
+            var kg = new ProjectKg("p1");
+            var fake = new FakeElementReader();
+            fake.AddLevel(1001, "N0", 0.0);
+            Projection.ApplyAdded(kg, fake, new long[] { 1001 });
+
+            var stats = Projection.ApplyAdded(kg, fake, new long[] { 1001 });
+
+            Assert.Equal(0, stats.NodesAffected);
+            Assert.Equal(1, stats.Skipped);
+            Assert.Equal(1, kg.NodeCount);
+        }
     }
 }

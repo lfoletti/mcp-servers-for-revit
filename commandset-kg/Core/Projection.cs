@@ -27,10 +27,33 @@ namespace RevitMCPKgCommandSet.Core
             if (addedElementIds == null) return new ProjectionStats(0, 0, 0);
 
             var newNodes = new Dictionary<long, string>();
+            var resurrected = new List<long>();
             int skipped = 0;
 
             foreach (var eid in addedElementIds)
             {
+                // Ctrl+Z on a delete: Revit re-uses the original ElementId.
+                // Preserve the llm_id by resurrecting the tombstone instead
+                // of forging a duplicate node bound to the same revit_id.
+                var existingLlmId = kg.FindByRevitId(eid);
+                if (existingLlmId != null)
+                {
+                    var existingNode = kg.GetNode(existingLlmId);
+                    if (existingNode.IsSoftDeleted)
+                    {
+                        kg.Resurrect(existingLlmId);
+                        resurrected.Add(eid);
+                    }
+                    else
+                    {
+                        // A live node already owns this revit_id. Revit
+                        // doesn't reuse live ElementIds, so this is a
+                        // defensive guard, not an expected branch.
+                        skipped++;
+                    }
+                    continue;
+                }
+
                 var nodeType = reader.ResolveNodeType(eid);
                 if (nodeType == null) { skipped++; continue; }
                 var attrs = reader.ReadAttrs(eid);
@@ -66,7 +89,19 @@ namespace RevitMCPKgCommandSet.Core
                 }
             }
 
-            return new ProjectionStats(newNodes.Count, edgesCreated, skipped);
+            // Resurrected nodes need attr/edge sync to match the current
+            // Revit state (the tombstoned snapshot may be stale).
+            int resurrectedEdges = 0;
+            if (resurrected.Count > 0)
+            {
+                var modStats = ApplyModified(kg, reader, resurrected);
+                resurrectedEdges = modStats.EdgesAffected;
+            }
+
+            return new ProjectionStats(
+                newNodes.Count + resurrected.Count,
+                edgesCreated + resurrectedEdges,
+                skipped);
         }
 
         public static ProjectionStats ApplyDeleted(ProjectKg kg, IEnumerable<long> deletedElementIds)

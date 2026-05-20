@@ -174,6 +174,22 @@ namespace RevitMCPKgCommandSet.Core
             _sink?.Emit(new DeltaEntry { Turn = _turn, Op = DeltaOps.SoftDelete, Id = llmId });
         }
 
+        // Clear the tombstone on a soft-deleted node, preserving llm_id and
+        // history. Called on the projection path when Revit re-creates an
+        // element with the SAME ElementId (Ctrl+Z on a delete, or Ctrl+Y on
+        // an undone create). No-op if the node is already alive.
+        public void Resurrect(string llmId)
+        {
+            if (!_nodes.TryGetValue(llmId, out var node))
+                throw new KeyNotFoundException(llmId);
+            if (!node.IsSoftDeleted) return;
+
+            node.Attrs[LifecycleAttrs.DeletedAt] = null;
+            _actionLog.Add(new ActionLogEntry(_turn, "resurrect", llmId, new Dictionary<string, object>()));
+
+            _sink?.Emit(new DeltaEntry { Turn = _turn, Op = DeltaOps.Resurrect, Id = llmId });
+        }
+
         public void SetRevitId(string llmId, long revitId)
         {
             if (!_nodes.TryGetValue(llmId, out var node))
