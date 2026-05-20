@@ -6,6 +6,69 @@ Journal de bord du travail KG. Convention reprise du projet source
 
 ---
 
+## 2026-05-20 — 🏁 Stage-2 VERDICT, matrice complète 16/16 (billable) — DESIGN §7(iv) : le KG interne ne vaut pas son coût en contexte modèle-vivant
+
+**Matrice exécutée** : 11 scénarios × 2 stacks (A=Revit-direct/`s2-direct`/`KG_BENCH_MODE=flat` ; B=Revit+KG/`s2-kg`/`KG_BENCH_MODE=kg-many`+`kg_bind_revit_id`) :
+P1 (small create+edit) · P3 (small structural query) · P5 (large 320 windows + delete cascade + bulk sill) ·
+S4 (atomic batch w/ failure) · S5 (out-of-band drift) · Q (5 questions) · M (10 mini-edits) ·
+Audit (multi-zone sill compliance, killer-case AEC) · Refactor (rename levels) · Rebind (delete+recreate) · Fanout (gros modèle + 3 questions).
+
+**Coût brûlé** : $9.42 (A) + $17.96 (B) = $27.38 utiles, + $4.78 gaspillés
+(P5/A max-turns DNF $4.33 + P5/B refusal-AskUserQuestion $0.19 + Rebind/B 429 quota $0.26) = **$32.16 total**.
+
+**Tableau coût/turns/fiabilité (B/A en gras quand B est défavorable)** :
+
+| Scénario | turns A/B | wall A/B (s) | cost A/B ($) | B/A coût | Fiabilité |
+|---|---|---|---|---|---|
+| P1 | 13/39 | 87/209 | 0.70/1.67 | **2.37×** | ✅/✅ |
+| P3 | 8/21 | 89/112 | 0.49/0.82 | 1.66× | ✅/✅ |
+| P5 | 42/69 | 591/1347 | 3.17/7.76 | **2.45×** | ❌ fabri 5.1× / ❌ fabri + faux « KG=Revit match » |
+| S4 | 5/8 | 28/42 | 0.34/0.43 | 1.26× | ✅/✅ |
+| S5 | 8/12 | 35/65 | 0.43/0.53 | 1.24× | ✅/✅ (B bypasse le KG) |
+| Q | 12/33 | 85/129 | 0.59/1.00 | 1.71× | ✅/✅ |
+| M | 20/48 | 157/194 | 1.04/1.48 | 1.42× | ✅/✅ |
+| Audit | 8/35 | 85/155 | 0.57/1.07 | **1.88×** | ✅/✅ |
+| Refactor | 13/13 | 110/104 | 0.74/0.79 | 1.07× | ✅/❌ **Revit non renommé + fabri** |
+| Rebind | 10/21 | 55/102 | 0.50/0.80 | 1.60× | ✅/✅ + audit trail |
+| Fanout | 10/33 | 106/269 | 0.86/1.61 | 1.87× | ✅/✅ |
+| **TOTAL** | **149/332** | **1428/2728** | **9.42/17.96** | **1.91× moyen** | — |
+
+**Findings consolidés** :
+
+1. **B coûte plus cher partout** (1.07× à 2.45×, moyenne 1.91×) — **jamais moins cher que A** sur les 11 scénarios. La promesse DESIGN §2 « beaucoup de questions → B » **ne se matérialise sur aucun scénario mesuré**, y compris Q (5 questions, B=1.71×A) et Fanout (3 questions sur gros modèle, B=1.87×A) qui étaient le terrain favori prédit du KG.
+
+2. **Fiabilité identique sur 9/11 scénarios. Sur les 2 restants, B est PIRE** :
+   - **Refactor/B** : claude renomme uniquement le KG (attribut `name` du nœud Level), n'appelle JAMAIS l'API Revit pour le rename réel, puis reporte « rename complete » en se basant sur la lecture du KG. Truth `ai_element_filter` post-run : R_N0/R_N1 toujours présents, L00_GROUND/L01_FIRST absents. Le steering B « Answer from KG » devient **vecteur de fabrication exécutionnelle** : confiance KG → pas de re-validation Revit → faux « done ».
+   - **P5/A et P5/B** : tous deux fabriquent 5.1× le compte de fenêtres (50 réelles vs 256 prétendues post-cascade — bouchée Revit-side à ~50 fenêtres, **indépendante du KG**). P5/B aggrave : prétend explicitement « KG and Revit match exactly » → claim doublement faux (ni KG=Revit ni Revit=cible). Le KG comme **co-fabricateur**.
+
+3. **S5 (drift detection)** : A détecte par construction (re-query systématique). B « gagne » seulement en **bypassant le KG** : claude/B dit « *kg_query would still report the seeded 2700 mm (drift), so Revit itself is the only authoritative source* » et utilise `send_code_to_revit` direct. Donc l'agent fait l'intelligence, pas le KG. **En conditions réelles** (agent non averti que drift a eu lieu), le steering B pousserait vers la réponse stale 2700.
+
+4. **Audit (killer case AEC, multi-zone)** : le seul scénario où le DESIGN prédisait B nettement gagnant (traversée `window → host → level → rule` est censée être l'usage idéal du KG, cf. `[[project-tower-kg]]` Stage-1). Résultat : B = 1.88× A pour le même 2/2 violations. Le data-pattern « big-fanout-read » qui devait justifier le KG ne le justifie pas non plus.
+
+5. **Rebind** : seul scénario où **B apporte une vraie valeur fonctionnelle** : soft-delete avec edges préservés sur le nœud tombstone → audit trail propre. Coût : 1.60× A. Le surcoût finance une fonctionnalité (history), pas juste de la cérémonie.
+
+6. **Bouchée Revit-fenêtres** (non-KG, infra) : Fanout/A et /B créent 40 fenêtres sans accroc. P5 (320 visées) bouchent à 50 des deux côtés. Le seuil de défaillance Revit-write se situe entre 40 et 320 — c'est un défaut de la pile MCP/command-set côté Revit, pas du KG. À investiguer hors Stage-2.
+
+**Lecture honnête vs DESIGN §7 issues pré-enregistrées** : (i) refusé ; (ii) refusé (B fiable+cher) ; (iii) partiellement vrai (Refactor staleness + P5 co-fabri), mais pas la cause dominante ; **(iv) c'est la conclusion qui colle au data** : « *A suffit, Revit-direct fiable et pas si cher → le KG interne ne vaut pas son coût en contexte modèle-vivant* ». Publié tel quel par le protocole pré-enregistré.
+
+**Nuances importantes à conserver** :
+- Stage-1 résultat (`§10.6` A/B + 17/17) était l'INVERSE — v1 ≥ PoC sur le terrain *no-Revit* (couche mémoire pure, KG vs flat-SQLite). Stage-2 mesure une autre question : KG-en-plus-de-Revit, et c'est cette question qui rend le KG défavorable.
+- Le KG conserve sa valeur quand **Revit est inaccessible** ou pour la **persistance d'historique structuré** (Rebind audit trail). Hors de ces cas, A=Revit-direct domine.
+- L'asymétrie de prompt P5 (B a la directive anti-clarif `Do NOT ask clarifying questions` que P5/A n'avait pas) est notée mais sans incidence : claude/B a fait le même travail incomplet que /A et a fabriqué les mêmes claims.
+
+**Artefacts** (gitignored sous `kg_bridge/benchmark/live/out/stage2/`) :
+22 fichiers : 11 × `<scen>__<stack>.rvt` + 11 × `<scen>__<stack>.run.json` + 11 × `<scen>__<stack>.truth.json`. Plus `stage2-bench.rvt` (template SaveAs partagé).
+
+**Tooling livré dans ce commit** :
+- `kg_bridge/benchmark/stage2/_run_claude.py` : `sys.stdout.reconfigure(encoding='utf-8')` fix (Microsoft Store Python 3.9 stdout cp1252 → UnicodeEncodeError sur le JSON claude). Sans ce fix : exit 1, no telemetry, travail-fait mais cost/turns/$ perdus (constaté sur P1/A run 1).
+- `kg_bridge/benchmark/stage2/run_stage2.mjs` : (a) `max_turns 40 → 200` + timeouts proportionnels (P5 avait DNF à 40 turns) ; (b) `SCENARIO_FILE` étendu de P1/P3/P5 à 11 scénarios (S4/S5/Q/M/Audit/Refactor/Rebind/Fanout).
+- `kg_bridge/benchmark/stage2/prompts/30_P5.txt` : ajout directive anti-clarif (`AskUserQuestion is not available`) après P5/B refusal-then-wait au run 1.
+- `kg_bridge/benchmark/stage2/prompts/{40_S4,50_S5,60_Q,70_M,80_Audit,90_Refactor,95_Rebind,96_Fanout}.txt` : 8 nouveaux scénarios.
+
+**Prochaine étape recommandée** (hors scope de ce commit) : décider si le finding §7(iv) déclenche un changement de cap (geler le KG interne ? recentrer sur le KG hors-Revit où Stage-1 le valide ?) — ce n'est pas une décision tech, c'est une décision stratégique utilisateur.
+
+---
+
 ## 2026-05-19 (soir, suite 12) — 🛠️ Stage-2 step-3 setup ①+② FAIT & VERT (non facturable)
 
 Livré : `profiles/s2-direct` (flat/no-kg) + `profiles/s2-kg`

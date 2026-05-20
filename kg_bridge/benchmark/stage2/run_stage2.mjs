@@ -42,9 +42,15 @@ const arg = (k, d) => { const i = argv.indexOf(k); return i >= 0 ? argv[i + 1] :
 const stack = arg("--stack");
 const scen = arg("--scenario");
 const stub = argv.includes("--stub");
-const SCENARIO_FILE = { P1: "10_P1.txt", P3: "20_P3.txt", P5: "30_P5.txt" };
+const SCENARIO_FILE = {
+  P1: "10_P1.txt", P3: "20_P3.txt", P5: "30_P5.txt",
+  S4: "40_S4.txt", S5: "50_S5.txt",
+  Q: "60_Q.txt", M: "70_M.txt",
+  Audit: "80_Audit.txt", Refactor: "90_Refactor.txt",
+  Rebind: "95_Rebind.txt", Fanout: "96_Fanout.txt",
+};
 if (!["A", "B"].includes(stack) || !SCENARIO_FILE[scen]) {
-  console.error("usage: --stack A|B --scenario P1|P3|P5 [--stub]"); process.exit(2);
+  console.error("usage: --stack A|B --scenario " + Object.keys(SCENARIO_FILE).join("|") + " [--stub]"); process.exit(2);
 }
 mkdirSync(OUT, { recursive: true });
 
@@ -106,8 +112,8 @@ if (stub) {
   // Python's subprocess pattern (proven by run_live.py) handles claude.cmd
   // + multi-line strings reliably. See _run_claude.py.
   const wrapper = resolvePath(HERE, "_run_claude.py");
-  const r = spawnSync("python", [wrapper, PROFILE_DIR[stack], "40", "1500"],
-    { input: prompt, encoding: "utf-8", timeout: 1600000 });
+  const r = spawnSync("python", [wrapper, PROFILE_DIR[stack], "200", "4500"],
+    { input: prompt, encoding: "utf-8", timeout: 4800000 });
   let claudeJson = null; try { claudeJson = JSON.parse(r.stdout); } catch {}
   runMeta.claude = { exit: r.status, json: claudeJson, raw_head: (r.stdout || "").slice(0, 400), stderr_head: (r.stderr || "").slice(0, 300) };
   console.log("claude exit", r.status, "is_error=", claudeJson?.is_error, "turns=", claudeJson?.num_turns, "wall_s=", ((Date.now() - t0) / 1000).toFixed(1));

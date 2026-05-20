@@ -10,6 +10,9 @@ Stdout = claude's --output-format json output. Exit code = claude's.
 """
 import sys, json, subprocess
 
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 cwd = sys.argv[1]
 max_turns = int(sys.argv[2])
 timeout = int(sys.argv[3])

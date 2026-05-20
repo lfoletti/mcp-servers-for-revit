@@ -1,0 +1,40 @@
+S5 — out-of-band drift detection.
+
+Execute this task NOW with the tools available. Do NOT ask clarifying
+questions — `AskUserQuestion` is not available in this mode. Do NOT
+defer execution or wait for confirmation.
+
+Step 1 — Seed. Create level S5_N0 at elevation 0 (if not already
+present), then create 4 walls on S5_N0, all with the same basic wall
+type, all 2700 mm high, end-to-end along X:
+- WALL_S5_1 from (0,0) to (4000,0)
+- WALL_S5_2 from (4000,0) to (8000,0)
+- WALL_S5_3 from (8000,0) to (12000,0)
+- WALL_S5_4 from (12000,0) to (16000,0)
+
+Step 2 — Out-of-band edit. This step SIMULATES a user opening Revit
+and editing a wall manually via the UI, bypassing your usual tools.
+Take the ElementId of WALL_S5_2 you got back at creation. Then issue
+exactly ONE low-level call `send_code_to_revit` with this body (this
+is a deliberate escape hatch — it is NOT your normal high-level edit
+path):
+
+```csharp
+var wall = document.GetElement(new ElementId(<WALL_S5_2_ELEM_ID>));
+var t = new Transaction(document, "S5 drift");
+t.Start();
+wall.get_Parameter(BuiltInParameter.WALL_USER_HEIGHT_PARAM).Set(2500.0 / 304.8);
+t.Commit();
+return "ok";
+```
+
+(`2500.0 / 304.8` ≈ 8.2021 — Revit stores heights in internal feet
+units; this sets the wall to 2500 mm.)
+
+After this raw call, DO NOT call any high-level edit tool, DO NOT
+update any cached state. This step is meant to leave any project-memory
+state out of sync with the actual Revit model.
+
+Step 3 — Report. What is the CURRENT height of WALL_S5_2 in millimetres?
+Give one number, then a one-line justification of which tool you used
+to find it.

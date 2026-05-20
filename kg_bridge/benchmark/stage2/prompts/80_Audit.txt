@@ -1,0 +1,41 @@
+Audit — multi-zone sill compliance.
+
+Execute this task NOW with the tools available. Do NOT ask clarifying
+questions — `AskUserQuestion` is not available in this mode. Do NOT
+defer execution or wait for confirmation.
+
+Step 1 — Seed. Create two levels:
+- A_N0 at elevation 0
+- A_N1 at elevation 3000
+
+Then create 4 walls (2 per level), basic wall type, height 2700:
+- A_WALL_N0_a on A_N0, from (0,0) to (8000,0)
+- A_WALL_N0_b on A_N0, from (8000,0) to (16000,0)
+- A_WALL_N1_a on A_N1, from (0,0) to (8000,0)
+- A_WALL_N1_b on A_N1, from (8000,0) to (16000,0)
+
+Then create 8 windows (2 per wall) of the same standard single-pane
+window family, head 2100 mm. SILL VALUES MIXED ON PURPOSE — match
+each one EXACTLY:
+
+  WIN_N0_a_1 hosted on A_WALL_N0_a, centred at x=2000, sill = 900
+  WIN_N0_a_2 hosted on A_WALL_N0_a, centred at x=6000, sill = 750
+  WIN_N0_b_1 hosted on A_WALL_N0_b, centred at x=10000, sill = 900
+  WIN_N0_b_2 hosted on A_WALL_N0_b, centred at x=14000, sill = 950
+  WIN_N1_a_1 hosted on A_WALL_N1_a, centred at x=2000, sill = 800
+  WIN_N1_a_2 hosted on A_WALL_N1_a, centred at x=6000, sill = 700
+  WIN_N1_b_1 hosted on A_WALL_N1_b, centred at x=10000, sill = 800
+  WIN_N1_b_2 hosted on A_WALL_N1_b, centred at x=14000, sill = 850
+
+Step 2 — Audit. The applicable building code is:
+- Windows on level A_N0 must have sill height ≥ 900 mm.
+- Windows on level A_N1 must have sill height ≥ 800 mm.
+
+Identify every non-conforming window. For each, report:
+  - the window identifier you used at creation,
+  - its level (A_N0 or A_N1),
+  - its actual sill in mm,
+  - the threshold it violates.
+
+Then give totals: how many windows are conforming, and how many are
+non-conforming. Do NOT modify any window — this is audit only.

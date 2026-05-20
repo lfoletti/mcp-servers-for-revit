@@ -1,6 +1,10 @@
 P5 — large model + delete + bulk sill change. Do EVERYTHING for REAL
 in the open Revit model.
 
+Execute this task NOW with the tools available. Do NOT ask clarifying
+questions — `AskUserQuestion` is not available in this mode. Do NOT
+defer execution or wait for confirmation.
+
 1. Create exactly 10 levels named P5_L0 through P5_L9 at elevations
    0, 3000, 6000, 9000, 12000, 15000, 18000, 21000, 24000, 27000 mm.
 

@@ -1,0 +1,33 @@
+Fanout — large model, 3 read-only questions.
+
+Execute this task NOW with the tools available. Do NOT ask clarifying
+questions — `AskUserQuestion` is not available in this mode. Do NOT
+defer execution or wait for confirmation.
+
+Step 1 — Seed. Create 5 levels at 3000 mm spacing:
+- F_L0 at 0
+- F_L1 at 3000
+- F_L2 at 6000
+- F_L3 at 9000
+- F_L4 at 12000
+
+On EACH of the 5 levels, create exactly 2 walls of the SAME basic wall
+type, 8000 mm long × 2700 mm high, end-to-end along X:
+- wall A: (0,0)→(8000,0)
+- wall B: (8000,0)→(16000,0)
+Total: 5 × 2 = 10 walls.
+
+On EACH wall, create exactly 4 windows hosted on that wall, of the
+same standard single-pane window family, evenly spaced along the
+wall length, sill = 900, head = 2100.
+Total: 10 × 4 = 40 windows.
+
+Step 2 — Answer the 3 following questions, in order, with exact counts
+from your tools (NOT from memory of what you just created):
+
+  F1. How many windows are on EACH level? Give a table level → count.
+  F2. Which wall(s), if any, have zero windows hosted? List them.
+  F3. What is the total wall length on F_L0..F_L4 combined (sum of all
+      wall lengths in mm)?
+
+End with a one-line summary giving F1 total, F2 count, F3 value.
