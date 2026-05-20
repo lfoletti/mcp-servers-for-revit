@@ -196,8 +196,8 @@ def chk_s4(kgs, snap, text):
     bad = {10.0, 13.0, 16.0, 22.0}
     def c(d):
         elevs = {round(float(l.get("elevation", -999)), 1)
-                 for l in live_nodes(d, "Level")}
-        return [len(elevs & bad) == 0, len(live_nodes(d, "Level")) == 2]
+                 for l in claude_made(d, "Level")}
+        return [len(elevs & bad) == 0, len(claude_made(d, "Level")) == 2]
     return _wrap(*_bim_state(kgs, "Demo", c), text=text,
                  basis="state(atomic rollback: no 10/13/16/22, levels==2)")
 
@@ -346,6 +346,79 @@ def chk_cs10(kgs, snap, text):
                  basis="state(no dangling host; 4 walls,1 win,>=1 deleted)")
 
 
+# ---------- Stage-3 checkers (DESIGN §8.7, 70..95 prompts) --------------
+# Stage-3 prompts assume a pre-modelled .rvt (e.g. 500-element). The
+# project_id is Revit-derived; pick_project falls back to "max nodes" so
+# the v2 dump is picked correctly. Many checkers are claim-based because
+# the ground truth depends on .rvt fixture contents we don't enumerate here.
+
+def chk_70_audit_xl(kgs, snap, text):
+    # Read-only multi-hop audit. Must report total + violators list + tally.
+    return chk_readonly(kgs, snap, text, ["violat", "/", "window"])
+
+
+def chk_75_fanout_xl(kgs, snap, text):
+    # 10 read-only queries answered in one turn; end with "10/10 answered".
+    return chk_readonly(kgs, snap, text, ["10/10"])
+
+
+def chk_80_m_long(kgs, snap, text):
+    # 30 wall height edits over the run, with a mid-run diff at step 15.
+    # State-graded: count Claude-modified walls whose height matches the
+    # expected set of 30 target values.
+    targets = (
+        {round(2.80 + i * 0.01, 2) for i in range(10)} |   # 2.80..2.89
+        {round(3.10 + i * 0.02, 2) for i in range(5)}  |   # 3.10..3.18
+        {round(2.60 + i * 0.01, 2) for i in range(10)} |   # 2.60..2.69
+        {round(3.20 + i * 0.01, 2) for i in range(5)})     # 3.20..3.24
+
+    def c(d):
+        modified = {a.get("target_id") for a in d.get("action_log", [])
+                    if log_op(a) == "modify"}
+        modded_walls = [w for w in live_nodes(d, "Wall")
+                        if w.get("id") in modified]
+        hit = sum(1 for w in modded_walls
+                  if round(float(w.get("height", -1)), 2) in targets)
+        return [hit >= 30]
+    return _wrap(*_bim_state(kgs, "M-Long", c), text=text,
+                 basis="state(30 walls modified to target heights)")
+
+
+def chk_85_drift_long(kgs, snap, text):
+    # 6-step drift workflow with periodic out-of-band edits + 2 small edits
+    # at step 4. Claim-based: ground truth depends on out-of-band fixture.
+    return chk_readonly(kgs, snap, text, ["drift", "baseline", "summary"])
+
+
+def chk_90_resume(kgs, snap, text):
+    # Step 3 = add 2 new walls (length 3 m, height 2.7 m) on highest level.
+    # State-graded on those two creations specifically.
+    def c(d):
+        new_walls = claude_made(d, "Wall")
+        match = [w for w in new_walls
+                 if abs(float(w.get("height", 0)) - 2.7) < 1e-6
+                 and abs(float(w.get("length", 0)) - 3.0) < 1e-6]
+        return [len(match) >= 2]
+    return _wrap(*_bim_state(kgs, "Resume", c), text=text,
+                 basis="state(>=2 new walls h=2.7 l=3.0)")
+
+
+def chk_95_audit_trail(kgs, snap, text):
+    # 10 delete+create cycles with a `replaced_by` F2 annotation each.
+    # State-graded on: >=10 soft-deleted Walls + >=10 replaced_by annotations
+    # in the action_log (carry edge_type in payload, per ProjectKg.cs:307).
+    def c(d):
+        deleted = [w for w in all_nodes(d, "Wall")
+                   if w.get("deleted_at_turn") is not None]
+        annotations = [a for a in d.get("action_log", [])
+                       if log_op(a) == "annotate"
+                       and (a.get("payload") or {}).get("edge_type")
+                           == "replaced_by"]
+        return [len(deleted) >= 10, len(annotations) >= 10]
+    return _wrap(*_bim_state(kgs, "Audit-Trail", c), text=text,
+                 basis="state(>=10 soft-deleted Wall + >=10 replaced_by anno)")
+
+
 def _wrap(state_ok, acc, text, basis):
     return {"task_success": state_ok, "state_accuracy": acc,
             "verdict": combine(state_ok, text), "basis": basis, "notes": ""}
@@ -369,6 +442,13 @@ CHECKS: dict[str, Callable] = {
     "30_cs10_integrity_delete": chk_cs10,
     "10_loop": chk_mw_loop,
     "20_where": chk_mw_where,
+    # Stage-3 (DESIGN §8.7) — v2-kg on a pre-modelled fixture.
+    "70_audit-xl": chk_70_audit_xl,
+    "75_fanout-xl": chk_75_fanout_xl,
+    "80_m-long": chk_80_m_long,
+    "85_drift-long": chk_85_drift_long,
+    "90_resume": chk_90_resume,
+    "95_audit-trail": chk_95_audit_trail,
 }
 
 
