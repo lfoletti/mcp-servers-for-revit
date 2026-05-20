@@ -84,6 +84,8 @@ function fmtLine(res) {
   const turn = r.Turn ?? r.turn ?? 0;
   const nodes = r.NodeCount ?? r.nodeCount ?? 0;
   const edges = r.EdgeCount ?? r.edgeCount ?? 0;
+  const pending = r.PendingDeltaCount ?? r.pendingDeltaCount ?? 0;
+  const esLen = r.EsJournalLength ?? r.esJournalLength ?? 0;
   const last = r.LastActionSummary ?? r.lastActionSummary ?? "(none)";
   return [
     `pid=${pid.slice(0, 12)}…`,
@@ -91,6 +93,8 @@ function fmtLine(res) {
     `turn=${turn}`,
     `nodes=${nodes}`,
     `edges=${edges}`,
+    `pending=${pending}`,
+    `es=${esLen}B`,
     `last="${last}"`,
   ].join("  ");
 }

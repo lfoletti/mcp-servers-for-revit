@@ -6,6 +6,7 @@ using System.Text;
 using Autodesk.Revit.ApplicationServices;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Events;
+using Autodesk.Revit.UI;
 using RevitMCPKgCommandSet.Core;
 
 namespace RevitMCPKgCommandSet.Services
@@ -17,6 +18,7 @@ namespace RevitMCPKgCommandSet.Services
         private static readonly object _lock = new object();
         private static bool _subscribed;
         private static Application _app;
+        private static ExternalEvent _flushEvent;
 
         private static readonly Dictionary<string, ProjectKg> _projects =
             new Dictionary<string, ProjectKg>();
@@ -35,8 +37,22 @@ namespace RevitMCPKgCommandSet.Services
                 {
                     app.DocumentChanged += OnDocumentChanged;
                     app.DocumentOpened += OnDocumentOpened;
+                    app.DocumentSaving += OnDocumentSaving;
+                    app.DocumentSavingAs += OnDocumentSavingAs;
                     _app = app;
                     _subscribed = true;
+
+                    try
+                    {
+                        if (_flushEvent == null)
+                            _flushEvent = ExternalEvent.Create(new KgV2FlushExternalEventHandler());
+                    }
+                    catch
+                    {
+                        // Fallback : if we can't create the ExternalEvent from
+                        // this context, OnDocumentChanged will Flush() inline
+                        // (best-effort, exceptions swallowed in the sink).
+                    }
 
                     var active = app.Documents
                         ?.Cast<Document>()
@@ -47,6 +63,15 @@ namespace RevitMCPKgCommandSet.Services
                 {
                     // Subscription best-effort, never break the caller.
                 }
+            }
+        }
+
+        public static void FlushCurrent()
+        {
+            lock (_lock)
+            {
+                if (string.IsNullOrEmpty(_currentDocKey)) return;
+                if (_sinks.TryGetValue(_currentDocKey, out var sink)) sink.Flush();
             }
         }
 
@@ -62,6 +87,28 @@ namespace RevitMCPKgCommandSet.Services
         public static string CurrentDocTitle
         {
             get { lock (_lock) { return _currentDocTitle; } }
+        }
+
+        public static int CurrentPendingCount
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    if (string.IsNullOrEmpty(_currentDocKey)) return 0;
+                    return _sinks.TryGetValue(_currentDocKey, out var sink) ? sink.PendingCount : 0;
+                }
+            }
+        }
+
+        public static int ReadEsJournalLength(Document doc)
+        {
+            try
+            {
+                var s = KgV2ExtensibleStorage.Read(doc);
+                return s?.Length ?? 0;
+            }
+            catch { return -1; }
         }
 
         // ---- bootstrap ----
@@ -176,10 +223,37 @@ namespace RevitMCPKgCommandSet.Services
 
                     kg.AdvanceTurn();
 
-                    if (_sinks.TryGetValue(key, out var sink)) sink.Flush();
+                    if (_sinks.TryGetValue(key, out var sink) && sink.HasPending)
+                    {
+                        if (_flushEvent != null) _flushEvent.Raise();
+                        else sink.Flush();
+                    }
                 }
             }
             catch { }
+        }
+
+        private static void OnDocumentSaving(object sender, DocumentSavingEventArgs e)
+        {
+            try { FlushBeforeSave(e?.Document); }
+            catch { }
+        }
+
+        private static void OnDocumentSavingAs(object sender, DocumentSavingAsEventArgs e)
+        {
+            try { FlushBeforeSave(e?.Document); }
+            catch { }
+        }
+
+        private static void FlushBeforeSave(Document doc)
+        {
+            if (doc == null) return;
+            lock (_lock)
+            {
+                var key = ProjectIdFor(doc);
+                if (_sinks.TryGetValue(key, out var sink) && sink.HasPending)
+                    sink.Flush();
+            }
         }
 
         private static void OnDocumentOpened(object sender, DocumentOpenedEventArgs e)

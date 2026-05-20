@@ -19,6 +19,7 @@ namespace RevitMCPKgCommandSet.Services
             {
                 KgV2DocumentWatcher.EnsureSubscribed(app?.Application);
                 var kg = KgV2DocumentWatcher.GetCurrentProjectKg();
+                var doc = app?.ActiveUIDocument?.Document;
 
                 var payload = new KgSessionInfoResult
                 {
@@ -27,6 +28,8 @@ namespace RevitMCPKgCommandSet.Services
                     Turn = kg?.Turn ?? 0,
                     NodeCount = kg?.NodeCount ?? 0,
                     EdgeCount = kg?.EdgeCount ?? 0,
+                    PendingDeltaCount = KgV2DocumentWatcher.CurrentPendingCount,
+                    EsJournalLength = doc != null ? KgV2DocumentWatcher.ReadEsJournalLength(doc) : 0,
                     LastActionSummary = SummarizeLastAction(kg),
                 };
 

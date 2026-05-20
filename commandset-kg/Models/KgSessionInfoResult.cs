@@ -7,6 +7,8 @@ namespace RevitMCPKgCommandSet.Models
         public int Turn { get; set; }
         public int NodeCount { get; set; }
         public int EdgeCount { get; set; }
+        public int PendingDeltaCount { get; set; }
+        public int EsJournalLength { get; set; }
         public string LastActionSummary { get; set; }
     }
 }
