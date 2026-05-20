@@ -20,6 +20,8 @@ namespace RevitMCPKgCommandSet.Services
 
         private static readonly Dictionary<string, ProjectKg> _projects =
             new Dictionary<string, ProjectKg>();
+        private static readonly Dictionary<string, EsDeltaSink> _sinks =
+            new Dictionary<string, EsDeltaSink>();
         private static string _currentDocKey = string.Empty;
         private static string _currentDocTitle = string.Empty;
 
@@ -72,14 +74,32 @@ namespace RevitMCPKgCommandSet.Services
                 _currentDocTitle = doc.Title ?? string.Empty;
                 if (_projects.ContainsKey(_currentDocKey)) return;
 
-                var kg = new ProjectKg(_currentDocKey);
-                var reader = new RevitElementReader(doc);
-                ScanAndProject(doc, kg, reader, typeof(Level));
-                ScanAndProject(doc, kg, reader, typeof(WallType));
-                ScanFamilySymbols(doc, kg, reader);
-                ScanAndProject(doc, kg, reader, typeof(Wall));
-                ScanFamilyInstances(doc, kg, reader);
+                var sink = new EsDeltaSink(doc);
+                var existing = KgV2ExtensibleStorage.Read(doc);
+
+                ProjectKg kg;
+                if (!string.IsNullOrEmpty(existing))
+                {
+                    var entries = JsonlSerializer.DeserializeAll(existing);
+                    var (replayed, _) = ProjectKgReplay.Replay(_currentDocKey, entries);
+                    kg = replayed;
+                    kg.AttachSink(sink);
+                }
+                else
+                {
+                    kg = new ProjectKg(_currentDocKey);
+                    kg.AttachSink(sink);
+                    var reader = new RevitElementReader(doc);
+                    ScanAndProject(doc, kg, reader, typeof(Level));
+                    ScanAndProject(doc, kg, reader, typeof(WallType));
+                    ScanFamilySymbols(doc, kg, reader);
+                    ScanAndProject(doc, kg, reader, typeof(Wall));
+                    ScanFamilyInstances(doc, kg, reader);
+                    sink.Flush();
+                }
+
                 _projects[_currentDocKey] = kg;
+                _sinks[_currentDocKey] = sink;
             }
             catch { }
         }
@@ -132,6 +152,11 @@ namespace RevitMCPKgCommandSet.Services
             {
                 lock (_lock)
                 {
+                    var txns = e.GetTransactionNames();
+                    bool onlyOurWrites = txns != null && txns.Count > 0 &&
+                        txns.All(n => n == KgV2ExtensibleStorage.WriteTransactionName);
+                    if (onlyOurWrites) return;
+
                     var doc = e.GetDocument();
                     if (doc == null) return;
                     var key = ProjectIdFor(doc);
@@ -150,6 +175,8 @@ namespace RevitMCPKgCommandSet.Services
                     if (deleted.Count > 0) Projection.ApplyDeleted(kg, deleted);
 
                     kg.AdvanceTurn();
+
+                    if (_sinks.TryGetValue(key, out var sink)) sink.Flush();
                 }
             }
             catch { }
