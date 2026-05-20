@@ -42,6 +42,11 @@
       "commandName": "kg_annotate",
       "description": "Author/replace/delete an F2 semantic annotation edge (replaced_by | tagged | violates_rule | implements_intent). Required: src, dst (llm_ids, may be soft-deleted), kind. Payload object = upsert/replace; payload null/absent = delete if present. Annotations survive undo/redo per DESIGN §6.",
       "assemblyPath": "RevitMCPKgCommandSet.dll"
+    },
+    {
+      "commandName": "kg_resolve_drift",
+      "description": "Align the KG v2 projection to the live Revit document on a per-entry basis. missing_in_kg → project the Revit element; attrs_diverged → overwrite KG attrs; orphan_kg_node → soft-delete the KG node (history kept); tombstoned_but_live → resurrect + re-sync. action_log appended, F2 annotations and bootstrap nodes preserved. Optional kinds[], node_type, dry_run filters. Non-dry-run requires confirm=\"align-to-revit\".",
+      "assemblyPath": "RevitMCPKgCommandSet.dll"
     }
   ]
 }

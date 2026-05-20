@@ -9,6 +9,14 @@ namespace RevitMCPKgCommandSet.Services
     public sealed class RevitElementReader : IElementReader
     {
         private const double FeetToMetres = 0.3048;
+        // Revit stores lengths in feet internally; * 0.3048 yields the classic
+        // double-precision tail (2.7499999999999996, 5.99999999999998, ...).
+        // Round at the source so every downstream consumer — projection,
+        // drift detect/resolve, kg_v2_query dump — sees clean values. 6
+        // decimals in metres = 1 µm precision, well below BIM tolerance.
+        private const int MetresRoundDecimals = 6;
+        private static double RoundM(double m) => Math.Round(m, MetresRoundDecimals);
+
         private readonly Document _doc;
 
         public RevitElementReader(Document doc)
@@ -155,14 +163,14 @@ namespace RevitMCPKgCommandSet.Services
             new Dictionary<string, object>
             {
                 ["name"] = lvl.Name ?? string.Empty,
-                ["elevation"] = lvl.Elevation * FeetToMetres,
+                ["elevation"] = RoundM(lvl.Elevation * FeetToMetres),
             };
 
         private static Dictionary<string, object> ReadWallTypeAttrs(WallType wt) =>
             new Dictionary<string, object>
             {
                 ["name"] = wt.Name ?? string.Empty,
-                ["total_thickness"] = wt.Width * FeetToMetres,
+                ["total_thickness"] = RoundM(wt.Width * FeetToMetres),
             };
 
         private Dictionary<string, object> ReadWallAttrs(Wall w)
@@ -173,9 +181,9 @@ namespace RevitMCPKgCommandSet.Services
             {
                 var a = lc.Curve.GetEndPoint(0);
                 var b = lc.Curve.GetEndPoint(1);
-                p1 = new[] { a.X * FeetToMetres, a.Y * FeetToMetres };
-                p2 = new[] { b.X * FeetToMetres, b.Y * FeetToMetres };
-                length = lc.Curve.ApproximateLength * FeetToMetres;
+                p1 = new[] { RoundM(a.X * FeetToMetres), RoundM(a.Y * FeetToMetres) };
+                p2 = new[] { RoundM(b.X * FeetToMetres), RoundM(b.Y * FeetToMetres) };
+                length = RoundM(lc.Curve.ApproximateLength * FeetToMetres);
             }
             double height = TryGetParamMetres(w, BuiltInParameter.WALL_USER_HEIGHT_PARAM) ?? 0.0;
 
@@ -195,7 +203,7 @@ namespace RevitMCPKgCommandSet.Services
             double[] position = null;
             if (fi.Location is LocationPoint lp && lp.Point != null)
             {
-                position = new[] { lp.Point.X * FeetToMetres, lp.Point.Y * FeetToMetres };
+                position = new[] { RoundM(lp.Point.X * FeetToMetres), RoundM(lp.Point.Y * FeetToMetres) };
             }
             double sill = TryGetParamMetres(fi, BuiltInParameter.INSTANCE_SILL_HEIGHT_PARAM) ?? 0.0;
             double head = TryGetParamMetres(fi, BuiltInParameter.INSTANCE_HEAD_HEIGHT_PARAM) ?? 0.0;
@@ -240,7 +248,7 @@ namespace RevitMCPKgCommandSet.Services
             {
                 var p = el.get_Parameter(bip);
                 if (p == null || !p.HasValue) return null;
-                return p.AsDouble() * FeetToMetres;
+                return RoundM(p.AsDouble() * FeetToMetres);
             }
             catch { return null; }
         }

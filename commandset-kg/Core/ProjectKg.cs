@@ -87,7 +87,17 @@ namespace RevitMCPKgCommandSet.Core
             if (unknown.Count > 0)
                 throw new ArgumentException($"Unknown attrs for {nodeType}: {string.Join(",", unknown.OrderBy(x => x))}");
 
-            if (llmId == null) llmId = NextLlmId(nodeType);
+            if (llmId == null)
+            {
+                llmId = NextLlmId(nodeType);
+            }
+            else
+            {
+                // Caller-supplied id (Replay path, restore, etc.): bump the
+                // counter so that a later NextLlmId() doesn't collide with
+                // a node loaded from a prior session.
+                BumpCounterFromLlmId(nodeType, llmId);
+            }
             if (_nodes.ContainsKey(llmId))
                 throw new ArgumentException($"llm_id already in graph: {llmId}");
 
@@ -330,6 +340,25 @@ namespace RevitMCPKgCommandSet.Core
             c++;
             _counters[nodeType] = c;
             return $"{nodeType.ToLowerInvariant()}_{c:D3}";
+        }
+
+        // Sync the per-type counter to the suffix of a caller-supplied
+        // llm_id. Called from AddNode when llmId is explicit (Replay path)
+        // so that subsequent NextLlmId() calls never produce a colliding id.
+        // Pattern recognised: "<lowercase_type>_<NNN>". Free-form ids are
+        // accepted but don't move the counter (they wouldn't have collided
+        // with the auto-generated pattern anyway).
+        private void BumpCounterFromLlmId(string nodeType, string llmId)
+        {
+            if (string.IsNullOrEmpty(llmId)) return;
+            var prefix = nodeType.ToLowerInvariant() + "_";
+            if (!llmId.StartsWith(prefix, StringComparison.Ordinal)) return;
+            var suffix = llmId.Substring(prefix.Length);
+            if (int.TryParse(suffix, out var n))
+            {
+                _counters.TryGetValue(nodeType, out var c);
+                if (n > c) _counters[nodeType] = n;
+            }
         }
 
         // ---- Transaction (snapshot / restore) ----

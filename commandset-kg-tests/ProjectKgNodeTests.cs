@@ -32,6 +32,49 @@ namespace RevitMCPKgCommandSet.Tests
         }
 
         [Fact]
+        public void AddNode_with_explicit_llmId_bumps_counter_for_next_auto_id()
+        {
+            // Replay scenario: a journal restored level_001/level_002/level_003
+            // via AddNode(llmId: ...). The next auto-id call must not collide
+            // — it must produce level_004 (not loop back to level_001).
+            var kg = new ProjectKg("p1");
+            kg.AddNode("Level", LevelAttrs(0.0, "L1"), llmId: "level_001");
+            kg.AddNode("Level", LevelAttrs(3.0, "L2"), llmId: "level_002");
+            kg.AddNode("Level", LevelAttrs(6.0, "L3"), llmId: "level_003");
+
+            var autoId = kg.AddNode("Level", LevelAttrs(9.0, "L4"));
+
+            Assert.Equal("level_004", autoId);
+            Assert.Equal(4, kg.NodeCount);
+        }
+
+        [Fact]
+        public void AddNode_explicit_llmId_does_not_lower_counter()
+        {
+            // If a caller supplies a LOWER id than current counter (manual
+            // restore), counter must not regress — NextLlmId stays monotonic.
+            var kg = new ProjectKg("p1");
+            kg.AddNode("Level", LevelAttrs(0.0, "L1"));  // auto: level_001
+            kg.AddNode("Level", LevelAttrs(3.0, "L2"));  // auto: level_002
+            // Out-of-band insert with an explicit, much lower-looking id.
+            kg.AddNode("Level", LevelAttrs(6.0, "L0"), llmId: "level_009");
+            // Next auto must be level_010, not level_003.
+            var autoId = kg.AddNode("Level", LevelAttrs(12.0, "L_top"));
+            Assert.Equal("level_010", autoId);
+        }
+
+        [Fact]
+        public void AddNode_freeform_llmId_does_not_bump_counter()
+        {
+            // Non-conformant ids (no "<type>_<NNN>" pattern) are accepted
+            // but don't move the counter — NextLlmId starts at 001.
+            var kg = new ProjectKg("p1");
+            kg.AddNode("Level", LevelAttrs(0.0, "L0"), llmId: "level_custom");
+            var autoId = kg.AddNode("Level", LevelAttrs(3.0, "L1"));
+            Assert.Equal("level_001", autoId);
+        }
+
+        [Fact]
         public void AdvanceTurn_increments_monotonically()
         {
             var kg = new ProjectKg("p1");
