@@ -40,6 +40,8 @@ namespace RevitMCPKgCommandSet.Core
         public int NodeCount => _nodes.Count;
         public int EdgeCount => _edges.Count;
         public IReadOnlyList<ActionLogEntry> ActionLog => _actionLog;
+        public IEnumerable<Node> Nodes => _nodes.Values;
+        public IEnumerable<Edge> Edges => _edges.Values;
 
         public bool HasNode(string llmId) => _nodes.ContainsKey(llmId);
 

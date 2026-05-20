@@ -12,6 +12,26 @@
       "commandName": "kg_session_info",
       "description": "Return KG v2 session metadata: project_id, current turn, node/edge counts, last action summary. Read-only.",
       "assemblyPath": "RevitMCPKgCommandSet.dll"
+    },
+    {
+      "commandName": "kg_query",
+      "description": "Search KG v2 nodes by type and/or attrs_filter (exact match). Read-only. Returns matching nodes with their attrs and lifecycle.",
+      "assemblyPath": "RevitMCPKgCommandSet.dll"
+    },
+    {
+      "commandName": "kg_diff_since",
+      "description": "Return KG v2 action log entries since a given turn (create/modify/delete/etc.). Read-only.",
+      "assemblyPath": "RevitMCPKgCommandSet.dll"
+    },
+    {
+      "commandName": "kg_get_by_revit_id",
+      "description": "Resolve a Revit ElementId to its KG v2 node (or null if unbound). Read-only.",
+      "assemblyPath": "RevitMCPKgCommandSet.dll"
+    },
+    {
+      "commandName": "kg_traverse",
+      "description": "Multi-hop traversal in the KG v2 from start_id following a path of {edge_type, direction (out|in)} steps. Returns reached node set (deduped).",
+      "assemblyPath": "RevitMCPKgCommandSet.dll"
     }
   ]
 }
