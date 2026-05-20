@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Autodesk.Revit.DB;
 using RevitMCPKgCommandSet.Core;
 
@@ -34,6 +35,49 @@ namespace RevitMCPKgCommandSet.Services
                 case FamilySymbol fs: return IsOpeningSymbol(fs) ? ReadFamilyTypeAttrs(fs) : null;
                 default: return null;
             }
+        }
+
+        public IEnumerable<long> EnumerateAllElementIds()
+        {
+            // Mirrors KgV2DocumentWatcher.BootstrapDocument's scan classes
+            // (Level, WallType, FamilySymbol-of-openings, Wall,
+            // FamilyInstance-of-openings) so drift detection covers
+            // exactly the node-type surface the projection knows about.
+            var ids = new List<long>();
+
+            ids.AddRange(new FilteredElementCollector(_doc)
+                .OfClass(typeof(Level))
+                .WhereElementIsNotElementType()
+                .Select(e => SafeIdValue(e.Id))
+                .Where(v => v > 0));
+
+            ids.AddRange(new FilteredElementCollector(_doc)
+                .OfClass(typeof(WallType))
+                .WhereElementIsElementType()
+                .Select(e => SafeIdValue(e.Id))
+                .Where(v => v > 0));
+
+            ids.AddRange(new FilteredElementCollector(_doc)
+                .OfClass(typeof(FamilySymbol))
+                .Cast<FamilySymbol>()
+                .Where(IsOpeningSymbol)
+                .Select(e => SafeIdValue(e.Id))
+                .Where(v => v > 0));
+
+            ids.AddRange(new FilteredElementCollector(_doc)
+                .OfClass(typeof(Wall))
+                .WhereElementIsNotElementType()
+                .Select(e => SafeIdValue(e.Id))
+                .Where(v => v > 0));
+
+            ids.AddRange(new FilteredElementCollector(_doc)
+                .OfClass(typeof(FamilyInstance))
+                .Cast<FamilyInstance>()
+                .Where(IsOpening)
+                .Select(e => SafeIdValue(e.Id))
+                .Where(v => v > 0));
+
+            return ids;
         }
 
         public IEnumerable<EdgeSpec> ReadEdges(long elementId)

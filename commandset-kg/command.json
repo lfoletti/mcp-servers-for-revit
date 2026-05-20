@@ -32,6 +32,11 @@
       "commandName": "kg_traverse",
       "description": "Multi-hop traversal in the KG v2 from start_id following a path of {edge_type, direction (out|in)} steps. Returns reached node set (deduped).",
       "assemblyPath": "RevitMCPKgCommandSet.dll"
+    },
+    {
+      "commandName": "kg_detect_drift",
+      "description": "Compare the KG v2 projection against the active Revit document and return divergences (missing_in_kg, orphan_kg_node, tombstoned_but_live, attrs_diverged). Optional node_type filter. Read-only.",
+      "assemblyPath": "RevitMCPKgCommandSet.dll"
     }
   ]
 }

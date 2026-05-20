@@ -20,6 +20,15 @@ namespace RevitMCPKgCommandSet.Tests
         public IEnumerable<EdgeSpec> ReadEdges(long elementId) =>
             Edges.TryGetValue(elementId, out var e) ? e : Enumerable.Empty<EdgeSpec>();
 
+        public IEnumerable<long> EnumerateAllElementIds() => Types.Keys;
+
+        public void Forget(long elementId)
+        {
+            Types.Remove(elementId);
+            Attrs.Remove(elementId);
+            Edges.Remove(elementId);
+        }
+
         public void AddLevel(long eid, string name, double elev)
         {
             Types[eid] = "Level";
