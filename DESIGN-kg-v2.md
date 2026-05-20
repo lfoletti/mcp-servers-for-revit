@@ -271,16 +271,16 @@ Revit émet `DocumentChanged` au Ctrl+Z avec `UndoOrRedo` flag dans `GetTransact
 
 ## 7. Décisions ouvertes (résidu)
 
-Les 6 décisions D-1 à D-6 ont été tranchées (cf. §1 L-6 à L-13 + §8.4). Résidu : seuils Stage-3 secondaires, à valider avant tout run facturable. Ces 4 valeurs sont posées comme **drafts pré-enregistrés** dans §8.4 ; je les liste ici pour ouverture explicite — change-les si elles te paraissent mal calibrées avant que Stage-3 démarre.
+Toutes décisions tranchées. Les 6 décisions D-1 à D-6 sont en §1 L-6 à L-13. Les 4 seuils R-1 à R-4 ont été validés au DRAFT proposé (utilisateur 2026-05-20) et deviennent les critères pré-enregistrés Stage-3 (§8.4) :
 
-| # | Quoi | Draft posé | Effet d'un changement |
-|---|---|---|---|
-| R-1 | C/A seuil sur sc. **neutres** (`P1`, `S4`, `Q`, `M`) | ≤ 1.3 (overhead toléré 30%) | plus strict → plus de chances de fail "v2 saigne sur petits cas" |
-| R-2 | C/A seuil "fail" sur petits cas | ≥ 1.5 = fail | plus permissif → laisse passer une v2 chère sur petit modèle |
-| R-3 | Taux de drift détecté C/A (sc. `Drift-Long`) | C ≥ 90% / A ≤ 30% | les chiffres sont à la louche ; A=30% suppose que le prompt demande un re-query systématique, à valider |
-| R-4 | Budget cold-start (sur modèle Stage-3 ~500 él.) | ≤ 5s acceptable | si > 5s observé → trigger pour bascule background L-7 (décision automatique, pas re-design) |
+| # | Quoi | Valeur verrouillée |
+|---|---|---|
+| R-1 | C/A seuil sur sc. **neutres** (`P1`, `S4`, `Q`, `M`) | ≤ 1.3 (overhead toléré 30%) |
+| R-2 | C/A seuil "fail" sur petits cas | ≥ 1.5 = fail |
+| R-3 | Taux de drift détecté C/A (sc. `Drift-Long`) | C ≥ 90% / A ≤ 30% |
+| R-4 | Budget cold-start (sur modèle Stage-3 ~500 él.) | ≤ 5s acceptable ; > 5s ⇒ bascule auto L-7 vers background |
 
-Si tu n'amendes pas, ces 4 drafts deviennent les critères de Stage-3.
+Plus aucun résidu ouvert. Stage-3 peut être lancé dès que C → P9 sont prêts.
 
 ---
 
