@@ -83,6 +83,25 @@ claude            # idem ; /mcp doit lister les kg_* ; exit
 > la viabilité de v1 ») : renommer `out\poc`→`out\poc-nosteer`,
 > `out\v1`→`out\v1-nosteer` avant le run 2.
 
+> **Post-profil offline (JOURNAL 2026-05-18 « PROFIL OFFLINE ») — le
+> steering est désormais scénario-aware.** `server/scripts/kg-es-probe.mjs`
+> a prouvé que l'infra ES est rapide (~47 ms/triplet de mutation à froid) :
+> le blow-up `10_s1` (597 s) / `20_s2` (timeout) était de l'**amplification
+> boucle-agent**, pas l'infra. Corrigé (3 fixes, non facturables) : (a)
+> `prompts/20_s2.txt` ne demande plus un *restate complet après chaque
+> edit* (→ 1 vérif finale unique) ; (b) `SUFFIX` est maintenant
+> `{profil}{seed|edit}` — la consigne lourde « découvre le schéma + bulk
+> ordonné par dépendance » ne va plus que sur le **seed** ; les scénarios
+> d'edit reçoivent un steering **lean** (peu d'appels, pas de restate
+> gratuit) ; (c) tous les suffixes `kg`/`kg-many` portent la consigne
+> documentée « un write peut signaler un timeout tout en ayant *commité* :
+> vérifier par UNE query avant de retenter, jamais de retry aveugle ». La
+> commande `--steer kg-many` ci-dessous est **inchangée** et reste valide
+> (la classe seed/edit s'applique dans le profil choisi). ⚠️ De ce fait
+> les chiffres du run 2 ne sont **pas** comparables aux runs partiels
+> d'avant-fix : conserver `*-nosteer` pour le récit, le run 2 est le
+> nouveau point de référence des deux côtés (prompts servis identiques).
+
 ## 1. Run PoC (pas de Revit)
 
 ```powershell

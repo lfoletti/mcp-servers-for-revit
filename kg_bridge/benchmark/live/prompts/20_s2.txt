@@ -1,8 +1,6 @@
 S2 — multi-edit session.
 
-Perform these 10 edits to project "Demo", one at a time, persisting each, and
-after every edit restate the full current project state from your
-project-memory tools:
+Perform these 10 edits to project "Demo", one at a time, persisting each:
 
 1. wall 1 height -> 2.80
 2. wall 2 height -> 2.81
@@ -15,4 +13,6 @@ project-memory tools:
 9. wall 9 height -> 2.88
 10. wall 10 height -> 2.89
 
-Finish with a one-line summary of how many edits were applied.
+Do NOT restate the full project after each edit. Once all 10 are persisted,
+query your project-memory tools ONCE and report the final height of walls
+1-10, then finish with a one-line summary of how many edits were applied.

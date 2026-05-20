@@ -379,3 +379,8 @@ FodyWeavers.xsd
 # KG benchmark runtime state (per-run, machine-specific)
 .kg-bench/
 .kg-bench-many/
+
+# Revit autosave backups (Revit creates foo.0001.rvt, foo.0002.rvt, ...
+# alongside the master foo.rvt every save). Only the master is a
+# meaningful fixture — backups are local journal noise.
+*.[0-9][0-9][0-9][0-9].rvt

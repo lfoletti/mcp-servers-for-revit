@@ -6,6 +6,46 @@ Journal de bord du travail KG. Convention reprise du projet source
 
 ---
 
+## 2026-05-20 — 🚀 P8 closing — 6 commits, 8 défauts résolus, Stage-3 ready ($1.31 / scénario bulk validé end-to-end)
+
+**Bilan** : journée massive sur la stack v2-kg. 6 commits, 8 défauts/améliorations livrés, Stage-3 mécaniquement prêt. Le scénario `80_m-long` (30 wall height edits — celui qui pendait à $3.35 timeout avant) tourne maintenant **`correct` state_acc 1.0 en $1.31, 15 turns, 4 min** via le pattern bulk (vs $2.09 / 61 turns / 14.5 min en sequential).
+
+**Commits** (du plus ancien au plus récent sur `feat/kg-v2`) :
+
+| Commit | Effet |
+|---|---|
+| `9f58f7d` | doc-rebind lazy-heal : v2-kg suit le doc actif Revit (File→New, ViewActivated, plugin Switch). `KgV2DocumentWatcher.EnsureSubscribed(UIApplication)` + bloc lazy-heal post-subscribe qui recalcule `_currentDocKey` depuis `uiApp.ActiveUIDocument`. + verify.py `claude_made` (filtre `created_at_turn > 0`) + `log_op` (accepte op OR action). chk_seed/chk_s1 v2-aware. |
+| `872a83b` | verify.py 6 chk Stage-3 (chk_70/75/80/85/90/95) + chk_s4 corrigé pour v2 (`live_nodes==2` → `claude_made==2`). |
+| `0054c71` | **kg_resolve_drift** (8e tool kg_v2_*) : MissingInKg → ApplyAdded, AttrsDiverged → ApplyModified, OrphanKgNode → SoftDelete, TombstonedButLive → Resurrect+sync. F2 annotations + bootstrap nodes (turn 0) préservés. Confirm="align-to-revit" mandatory. + `Math.Round(m, 6)` sur tous les double feet→metres dans RevitElementReader (tue le `2.9999999999999996`). + ProjectKg.AddNode counter sync sur explicit llmId (bug pré-existant qui empêchait AddNode post-replay : `_counters` pas bumpé par les llmId explicites du Replay → NextLlmId collidait). 14 tests ajoutés. |
+| `963d854` | **Append-only chunked ES storage** : EsDeltaSink.Flush ne réécrit plus le journal entier (O(journal_size)) ; chaque flush crée un nouveau DataStorage avec UNIQUEMENT les pending deltas (O(N_pending)). Schema chunk distinct (GUID B4E8…) + lecture combine legacy entity (whole-blob historique) + chunks ordonnés par chunk_seq. Migration read-only, lossless. Résout le scaling debt v1 hérité (JOURNAL « suite 4 »). |
+| `53957d5` | **SwallowWarningsPreprocessor** sur 21 write Transactions upstream (commandset/Services/*). Helper `tx.StartWithSwallowedWarnings()` qui Get → Set preprocessor + ClearAfterRollback → Set → Start. Résout le **modal dialog blocker** qui hangait MCP headless sur warnings (« walls overlap »…) — symptôme initial 80_m-long incomplete $3.35. |
+| `90bf9cc` | **batch_set_parameters** tool générique : N {element_id, param, value} → 1 Transaction Revit. Param resolution BuiltInParameter enum → fallback LookupParameter case-insensitive. Length params (height/sill/...) en mètres auto-convertis. Atomic rollback par défaut. ExecuteCodeEventHandler.cs (send_code_to_revit Transaction, manqué au commit précédent) patché aussi. |
+
+**Validation perf compound — 80_m-long sur tests/500_objs.rvt** :
+
+| État | Verdict | Cost | Turns | Wall | Notes |
+|---|---|--:|--:|--:|---|
+| Initial (avant tout fix) | hang | $3.35 perdu | 61 (max) | 14.5 min | Modal dialog `walls overlap` non-dismissable |
+| Post-fixes 1..6 (sequential) | **correct** | $2.09 | 61 | 14.5 min | Dialog swallowed, chunking actif, counter sync |
+| Post-fix 7 (batch_set_params) | **correct** | **$1.31** | **15** | **4 min** | 1 bulk call de 15 ops × 2 batches |
+| Δ | — | **−61%** | **−75%** | **−72%** | gain compound vs initial |
+
+**Coût/modify** : $2.09/30 = $0.07 (sequential) → $1.31/30 = $0.04 (bulk). Pour P9 facturable 17 scénarios, si ~50% sont multi-modify, gain global ~30-40%.
+
+**Findings opérationnels surfacés & sauvegardés en mémoire** :
+1. [[kg-v2-doc-rebind-gap]] — RÉSOLU 9f58f7d
+2. [[kg-v2-lazy-subscribe-gap]] — workaround connu (probe `kg_session_info` avant édits UI manuels), fix futur = eager EnsureSubscribed au plugin OnStartup
+3. [[revit-modal-dialog-blocker]] — RÉSOLU 53957d5
+4. `commandRegistry.json` côté plugin déployé est **out-of-tree** (maintenu manuellement, non-tracké). Chaque nouveau MCP tool requiert d'ajouter une entrée à `%APPDATA%\…\revit_mcp_plugin\Commands\commandRegistry.json`. Deploy script à scripter (TODO post-P8).
+
+**Tests** : 131/131 unit tests verts (était 117 début de session, +14 : 11 DriftResolutionTests + 3 counter sync). Aucun KgV2DocumentWatcher / EsDeltaSink / batch handler unit-testé (Revit-bound) — validation via probes live sur 500_objs.rvt.
+
+**État Stage-3** : pipeline 100 % vert, fixture 500_objs.rvt drift=0 post-resolve, 2/6 prompts validés (70_audit-xl correct $1.61, 80_m-long correct $1.31 bulk / $2.09 sequential). **4 prompts prêts à tourner** : 75_fanout-xl, 85_drift-long, 90_resume, 95_audit-trail. Estimation budget : ~$10-20 pour le sprint complet.
+
+**Suite** : bench Stage-3 sur session Claude Code clean (cette session a beaucoup de bruit en contexte). User décide.
+
+---
+
 ## 2026-05-20 — 🏁 Stage-2 VERDICT, matrice complète 16/16 (billable) — DESIGN §7(iv) : le KG interne ne vaut pas son coût en contexte modèle-vivant
 
 **Matrice exécutée** : 11 scénarios × 2 stacks (A=Revit-direct/`s2-direct`/`KG_BENCH_MODE=flat` ; B=Revit+KG/`s2-kg`/`KG_BENCH_MODE=kg-many`+`kg_bind_revit_id`) :

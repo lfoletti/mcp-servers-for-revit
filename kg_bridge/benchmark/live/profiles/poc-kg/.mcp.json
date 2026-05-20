@@ -1,14 +1,14 @@
 {
-  "_comment": "PoC baseline stack (frozen branch feat/kg-memory-poc @ 9b9f680, in a git worktree). Adjust the worktree path on the 2 absolute paths below if you place it elsewhere. Python = conda 'revitmcp' (no .venv); networkx must be installed there (pip install -r kg_bridge/requirements.txt).",
+  "_comment": "PoC baseline stack (frozen branch feat/kg-memory-poc @ 9b9f680, in a git worktree). Adjust the worktree path on the 2 absolute paths below if you place it elsewhere. KG_PYTHON = base anaconda python (the 'revitmcp' conda env is node-only — no python.exe; verified 2026-05-18 base anaconda has networkx 3.3, satisfies kg_bridge/requirements.txt). 'command' is the ABSOLUTE conda node.exe (plain 'node' is NOT on the system PATH). Changing KG_PYTHON or command requires a Claude Code restart (MCP reconnect) to take effect.",
   "mcpServers": {
     "revit": {
-      "command": "node",
+      "command": "C:/Users/lauro/AppData/Local/anaconda3/envs/revitmcp/node.exe",
       "args": [
         "C:/Users/lauro/Documents/IT/poc-baseline/server/build/index.js"
       ],
       "env": {
         "KG_BENCH_MODE": "kg-many",
-        "KG_PYTHON": "C:/Users/lauro/AppData/Local/anaconda3/envs/revitmcp/python.exe",
+        "KG_PYTHON": "C:/Users/lauro/AppData/Local/anaconda3/python.exe",
         "KG_HOME": "C:/Users/lauro/Documents/IT/poc-baseline/.kg-bench-poc"
       }
     }
