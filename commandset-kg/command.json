@@ -1,0 +1,17 @@
+{
+  "name": "RevitMCPKgCommandSet",
+  "description": "Knowledge Graph v2 — C# native projection of the Revit model (DESIGN-kg-v2.md)",
+  "developer": {
+    "name": "mcp-servers-for-revit-kg-poc",
+    "email": "",
+    "website": "",
+    "organization": "mcp-servers-for-revit-kg-poc"
+  },
+  "commands": [
+    {
+      "commandName": "kg_session_info",
+      "description": "Return KG v2 session metadata: project_id, current turn, node/edge counts, last action summary. Read-only.",
+      "assemblyPath": "RevitMCPKgCommandSet.dll"
+    }
+  ]
+}
