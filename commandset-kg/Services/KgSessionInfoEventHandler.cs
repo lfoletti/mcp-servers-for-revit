@@ -17,24 +17,24 @@ namespace RevitMCPKgCommandSet.Services
         {
             try
             {
-                var doc = app?.ActiveUIDocument?.Document;
-                var pathName = doc?.PathName ?? string.Empty;
-                var projectId = string.IsNullOrEmpty(pathName)
-                    ? $"title:{doc?.Title ?? "untitled"}"
-                    : pathName;
+                KgV2DocumentWatcher.EnsureSubscribed(app?.Application);
+                var kg = KgV2DocumentWatcher.GetCurrentProjectKg();
+
+                var payload = new KgSessionInfoResult
+                {
+                    ProjectId = kg?.ProjectId ?? string.Empty,
+                    DocTitle = KgV2DocumentWatcher.CurrentDocTitle,
+                    Turn = kg?.Turn ?? 0,
+                    NodeCount = kg?.NodeCount ?? 0,
+                    EdgeCount = kg?.EdgeCount ?? 0,
+                    LastActionSummary = SummarizeLastAction(kg),
+                };
 
                 Result = new AIResult<KgSessionInfoResult>
                 {
                     Success = true,
-                    Message = "KG v2 session info (stub)",
-                    Response = new KgSessionInfoResult
-                    {
-                        ProjectId = projectId,
-                        Turn = 0,
-                        NodeCount = 0,
-                        EdgeCount = 0,
-                        LastActionSummary = "stub — KG v2 not yet wired to DocumentChanged (P2)",
-                    },
+                    Message = "KG v2 session info",
+                    Response = payload,
                 };
             }
             catch (Exception ex)
@@ -49,6 +49,13 @@ namespace RevitMCPKgCommandSet.Services
             {
                 _resetEvent.Set();
             }
+        }
+
+        private static string SummarizeLastAction(RevitMCPKgCommandSet.Core.ProjectKg kg)
+        {
+            if (kg == null || kg.ActionLog.Count == 0) return "no actions yet";
+            var last = kg.ActionLog[kg.ActionLog.Count - 1];
+            return $"turn {last.Turn}: {last.Op} {last.TargetId}";
         }
 
         public bool WaitForCompletion(int timeoutMilliseconds = 10000)
