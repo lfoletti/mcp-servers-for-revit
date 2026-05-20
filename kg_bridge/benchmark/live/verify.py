@@ -446,6 +446,9 @@ CHECKS: dict[str, Callable] = {
     "70_audit-xl": chk_70_audit_xl,
     "75_fanout-xl": chk_75_fanout_xl,
     "80_m-long": chk_80_m_long,
+    # Bulk variant of 80_m-long (uses batch_set_parameters) — same target
+    # state (30 walls modified to target heights), reused checker.
+    "80b_m-long-bulk": chk_80_m_long,
     "85_drift-long": chk_85_drift_long,
     "90_resume": chk_90_resume,
     "95_audit-trail": chk_95_audit_trail,
