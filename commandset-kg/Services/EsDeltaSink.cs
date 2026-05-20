@@ -44,15 +44,18 @@ namespace RevitMCPKgCommandSet.Services
 
             try
             {
-                var existing = KgV2ExtensibleStorage.Read(_doc) ?? string.Empty;
-                var sb = new StringBuilder(existing.Length + 256 * toFlush.Count);
-                sb.Append(existing);
+                // Append-only chunked persist (O(N_pending) per call).
+                // The serialised chunk holds ONLY the new entries —
+                // KgV2ExtensibleStorage.Append creates a new DataStorage
+                // with the next chunk_seq; Read combines all chunks +
+                // any legacy whole-blob entity on demand.
+                var sb = new StringBuilder(256 * toFlush.Count);
                 foreach (var entry in toFlush)
                 {
                     sb.Append(JsonlSerializer.SerializeOne(entry));
                     sb.Append('\n');
                 }
-                KgV2ExtensibleStorage.Write(_doc, sb.ToString());
+                KgV2ExtensibleStorage.Append(_doc, sb.ToString());
 
                 lock (_lock)
                 {
