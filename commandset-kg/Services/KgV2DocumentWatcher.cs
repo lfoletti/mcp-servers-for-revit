@@ -27,41 +27,66 @@ namespace RevitMCPKgCommandSet.Services
         private static string _currentDocKey = string.Empty;
         private static string _currentDocTitle = string.Empty;
 
-        public static void EnsureSubscribed(Application app)
+        public static void EnsureSubscribed(UIApplication uiApp)
         {
+            if (uiApp == null) return;
+            var app = uiApp.Application;
             if (app == null) return;
             lock (_lock)
             {
-                if (_subscribed) return;
-                try
+                if (!_subscribed)
                 {
-                    app.DocumentChanged += OnDocumentChanged;
-                    app.DocumentOpened += OnDocumentOpened;
-                    app.DocumentSaving += OnDocumentSaving;
-                    app.DocumentSavingAs += OnDocumentSavingAs;
-                    _app = app;
-                    _subscribed = true;
-
                     try
                     {
-                        if (_flushEvent == null)
-                            _flushEvent = ExternalEvent.Create(new KgV2FlushExternalEventHandler());
+                        app.DocumentChanged += OnDocumentChanged;
+                        app.DocumentOpened += OnDocumentOpened;
+                        app.DocumentSaving += OnDocumentSaving;
+                        app.DocumentSavingAs += OnDocumentSavingAs;
+                        _app = app;
+                        _subscribed = true;
+
+                        try
+                        {
+                            if (_flushEvent == null)
+                                _flushEvent = ExternalEvent.Create(new KgV2FlushExternalEventHandler());
+                        }
+                        catch
+                        {
+                            // Fallback : if we can't create the ExternalEvent from
+                            // this context, OnDocumentChanged will Flush() inline
+                            // (best-effort, exceptions swallowed in the sink).
+                        }
+
+                        var first = app.Documents
+                            ?.Cast<Document>()
+                            .FirstOrDefault(d => d != null && !d.IsLinked);
+                        if (first != null) BootstrapDocument(first);
                     }
                     catch
                     {
-                        // Fallback : if we can't create the ExternalEvent from
-                        // this context, OnDocumentChanged will Flush() inline
-                        // (best-effort, exceptions swallowed in the sink).
+                        // Subscription best-effort, never break the caller.
                     }
+                }
 
-                    var active = app.Documents
-                        ?.Cast<Document>()
-                        .FirstOrDefault(d => d != null && !d.IsLinked);
-                    if (active != null) BootstrapDocument(active);
+                // Lazy re-align to the active document on every call.
+                // Covers File→New (no DocumentOpened event), inter-doc
+                // ViewActivated, and any path where the active doc has drifted
+                // from _currentDocKey (e.g. plugin "Switch" UI without rebind).
+                try
+                {
+                    var active = uiApp.ActiveUIDocument?.Document;
+                    if (active != null && !active.IsLinked)
+                    {
+                        var activeKey = ProjectIdFor(active);
+                        if (activeKey != _currentDocKey || !_projects.ContainsKey(activeKey))
+                        {
+                            BootstrapDocument(active);
+                        }
+                    }
                 }
                 catch
                 {
-                    // Subscription best-effort, never break the caller.
+                    // Re-align best-effort, never break the caller.
                 }
             }
         }

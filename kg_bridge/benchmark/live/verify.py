@@ -64,6 +64,19 @@ def all_nodes(d: dict, ntype: str) -> list[dict]:
     return [n for n in d.get("nodes", []) if n.get("_type") == ntype]
 
 
+def claude_made(d: dict, ntype: str) -> list[dict]:
+    # v2 dumps include the bootstrap projection (template catalogue) at
+    # turn 0; only nodes with created_at_turn > 0 came from the scenario.
+    # v1 sidecars don't emit the key — all live nodes are Claude-made.
+    return [n for n in live_nodes(d, ntype)
+            if "created_at_turn" not in n or n["created_at_turn"] > 0]
+
+
+def log_op(entry: dict) -> Optional[str]:
+    # v2 uses op, v1 uses action; either is a single-string verb.
+    return entry.get("op") or entry.get("action")
+
+
 def load_flat_rooms(snap: Path, project_substr: str) -> Optional[list[dict]]:
     db = snap / "flat.db"
     if not db.exists():
@@ -134,10 +147,10 @@ def _bim_state(kgs, name, conds_fn):
 
 def chk_seed(kgs, snap, text):
     ok, acc = _bim_state(kgs, "Demo", lambda d: [
-        len(live_nodes(d, "Level")) == 2,
-        len(live_nodes(d, "WallType")) == 1,
-        len(live_nodes(d, "Wall")) == 20,
-        len(live_nodes(d, "Window")) == 8])
+        len(claude_made(d, "Level")) == 2,
+        len(claude_made(d, "WallType")) == 1,
+        len(claude_made(d, "Wall")) == 20,
+        len(claude_made(d, "Window")) == 8])
     return _wrap(ok, acc, text, "state(KG Demo counts)")
 
 
@@ -145,7 +158,7 @@ def chk_s1(kgs, snap, text):
     def c(d):
         walls = live_nodes(d, "Wall")
         return [any(abs(float(w.get("height", 0)) - 3.2) < 1e-6 for w in walls),
-                any(a.get("action") == "modify" for a in d.get("action_log", []))]
+                any(log_op(a) == "modify" for a in d.get("action_log", []))]
     return _wrap(*_bim_state(kgs, "Demo", c), text=text,
                  basis="state(wall height 3.2 + modify log)")
 

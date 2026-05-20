@@ -27,7 +27,7 @@ namespace RevitMCPKgCommandSet.Services
         {
             try
             {
-                KgV2DocumentWatcher.EnsureSubscribed(app?.Application);
+                KgV2DocumentWatcher.EnsureSubscribed(app);
                 var kg = KgV2DocumentWatcher.GetCurrentProjectKg();
                 var doc = app?.ActiveUIDocument?.Document;
 
