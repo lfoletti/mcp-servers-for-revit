@@ -255,6 +255,73 @@ namespace RevitMCPKgCommandSet.Core
             return true;
         }
 
+        // F2 semantic annotation (DESIGN §2.2, L-10). Upserts the edge with
+        // `payload` as attrs ; `payload == null` deletes if present, no-op
+        // otherwise. Accepts soft-deleted src/dst so the audit trail
+        // (replaced_by, etc.) can outlive the tombstoning of its anchors.
+        // Emits exactly one DeltaOps.Annotate entry (or none on no-op).
+        public string Annotate(string src, string dst, string kind, Dictionary<string, object> payload)
+        {
+            if (!EdgeTypes.F2.Contains(kind))
+                throw new ArgumentException($"Not an F2 annotation edge type: {kind}");
+            if (!_nodes.ContainsKey(src)) throw new KeyNotFoundException($"src: {src}");
+            if (!_nodes.ContainsKey(dst)) throw new KeyNotFoundException($"dst: {dst}");
+
+            var key = new EdgeKey(src, dst, kind);
+            var exists = _edges.TryGetValue(key, out var existing);
+
+            if (payload == null)
+            {
+                if (!exists) return "noop";
+                _edges.Remove(key);
+                if (_outgoing.TryGetValue(src, out var outSet)) outSet.Remove(key);
+                if (_incoming.TryGetValue(dst, out var inSet)) inSet.Remove(key);
+
+                _actionLog.Add(new ActionLogEntry(_turn, "annotate_delete", $"{src}->{dst}",
+                    new Dictionary<string, object> { ["edge_type"] = kind }));
+                _sink?.Emit(new DeltaEntry
+                {
+                    Turn = _turn,
+                    Op = DeltaOps.Annotate,
+                    Src = src,
+                    Dst = dst,
+                    EdgeType = kind,
+                });
+                return "delete";
+            }
+
+            var attrsCopy = new Dictionary<string, object>(payload);
+            if (exists)
+            {
+                _edges[key] = new Edge(src, dst, kind, attrsCopy);
+            }
+            else
+            {
+                _edges[key] = new Edge(src, dst, kind, attrsCopy);
+                if (!_outgoing.TryGetValue(src, out var outSet)) _outgoing[src] = outSet = new HashSet<EdgeKey>();
+                outSet.Add(key);
+                if (!_incoming.TryGetValue(dst, out var inSet)) _incoming[dst] = inSet = new HashSet<EdgeKey>();
+                inSet.Add(key);
+            }
+
+            _actionLog.Add(new ActionLogEntry(_turn, "annotate", $"{src}->{dst}", new Dictionary<string, object>
+            {
+                ["edge_type"] = kind,
+                ["payload"] = new Dictionary<string, object>(payload),
+            }));
+            _sink?.Emit(new DeltaEntry
+            {
+                Turn = _turn,
+                Op = DeltaOps.Annotate,
+                Src = src,
+                Dst = dst,
+                EdgeType = kind,
+                Attrs = new Dictionary<string, object>(payload),
+            });
+
+            return exists ? "replace" : "upsert";
+        }
+
         // ---- llm_id allocator ----
 
         private string NextLlmId(string nodeType)

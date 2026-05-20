@@ -68,6 +68,11 @@ namespace RevitMCPKgCommandSet.Core
                 case DeltaOps.RemoveEdge:
                     kg.RemoveEdge(e.Src, e.Dst, e.EdgeType);
                     break;
+                case DeltaOps.Annotate:
+                    // payload absent on the wire (NullValueHandling.Ignore)
+                    // is the delete sentinel for F2 annotations.
+                    kg.Annotate(e.Src, e.Dst, e.EdgeType, e.Attrs);
+                    break;
                 default:
                     throw new NotSupportedException($"unknown op: {e.Op}");
             }

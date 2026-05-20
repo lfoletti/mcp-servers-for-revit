@@ -37,6 +37,11 @@
       "commandName": "kg_detect_drift",
       "description": "Compare the KG v2 projection against the active Revit document and return divergences (missing_in_kg, orphan_kg_node, tombstoned_but_live, attrs_diverged). Optional node_type filter. Read-only.",
       "assemblyPath": "RevitMCPKgCommandSet.dll"
+    },
+    {
+      "commandName": "kg_annotate",
+      "description": "Author/replace/delete an F2 semantic annotation edge (replaced_by | tagged | violates_rule | implements_intent). Required: src, dst (llm_ids, may be soft-deleted), kind. Payload object = upsert/replace; payload null/absent = delete if present. Annotations survive undo/redo per DESIGN §6.",
+      "assemblyPath": "RevitMCPKgCommandSet.dll"
     }
   ]
 }

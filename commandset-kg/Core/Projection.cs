@@ -165,7 +165,7 @@ namespace RevitMCPKgCommandSet.Core
 
                 var oldF1Edges = kg.OutgoingEdges(llmId)
                     .Concat(kg.IncomingEdges(llmId))
-                    .Where(e => EdgeTypes.All.Contains(e.EdgeType))
+                    .Where(e => EdgeTypes.F1.Contains(e.EdgeType))
                     .Distinct()
                     .ToList();
                 foreach (var e in oldF1Edges) kg.RemoveEdge(e.Src, e.Dst, e.EdgeType);
