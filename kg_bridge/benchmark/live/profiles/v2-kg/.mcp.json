@@ -1,0 +1,15 @@
+{
+  "_comment": "Stage-3 stack C = Revit + KG v2 (DESIGN-kg-v2.md). KG_BENCH_MODE=flat ⇒ v1 kg_* NOT registered (kg_query/kg_diff_since v1 muets). KG_V2_TOOLS=on ⇒ kg_v2_* registered : kg_v2_session_info, kg_v2_query, kg_v2_diff_since, kg_v2_get_by_revit_id, kg_v2_traverse (read-only ; la projection RevitMCPKgCommandSet auto-maintient le KG via DocumentChanged, l'agent ne mute pas le KG). Différent de s2-kg (stack B v1) ET de s2-direct (stack A no-kg). Agent steering doit favoriser kg_v2_* pour les lectures structurelles/historiques et utiliser les Revit-direct commands (create_*/modify_*/delete_*/ai_element_filter) pour mutations + queries de bas niveau ; store_*_data techniquement présent (non gaté) mais à éviter (déviation documentée). 'command' est l'ABSOLU conda 'revitmcp' node.exe. New profile dir ⇒ one-time Claude Code MCP approval + headless probe (server/scripts/kg-v2-probe.mjs) AVANT tout run facturable.",
+  "mcpServers": {
+    "revit": {
+      "command": "C:/Users/lauro/AppData/Local/anaconda3/envs/revitmcp/node.exe",
+      "args": [
+        "C:/Users/lauro/Documents/IT/mcp-servers-for-revit-kg-poc/server/build/index.js"
+      ],
+      "env": {
+        "KG_BENCH_MODE": "flat",
+        "KG_V2_TOOLS": "on"
+      }
+    }
+  }
+}
