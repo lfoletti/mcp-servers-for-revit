@@ -81,6 +81,31 @@ SUFFIX = {
                 "restate the full project unless explicitly asked."
                 + _KG_RETRY + ")",
     },
+    # Stack C (KG v2): the projection auto-maintains via DocumentChanged,
+    # so mutations go through Revit-direct tools (create_*/modify_*/
+    # delete_*/ai_element_filter), NOT through any kg_* write API. The
+    # kg_v2_* tools are read-only (query, diff_since, traverse,
+    # get_by_revit_id, session_info, detect_drift) plus kg_annotate for
+    # F2 semantic relations. store_*_data is technically present but
+    # off-policy for this stack — DESIGN-kg-v2 documents the deviation.
+    "v2-kg": {
+        "seed": " (Use the Revit-direct tools (create_*/modify_*/delete_*) "
+                "to author and edit the model; the KG v2 projection follows "
+                "automatically. Use the kg_v2_* read tools "
+                "(kg_v2_query / kg_v2_diff_since / kg_v2_traverse / "
+                "kg_v2_get_by_revit_id / kg_v2_session_info / "
+                "kg_v2_detect_drift) for structural and historical lookups, "
+                "and kg_v2_annotate to record semantic relations "
+                "(replaced_by, tagged, violates_rule, implements_intent). "
+                "Avoid store_*_data: off-policy on this stack.)",
+        "edit": " (Use the Revit-direct tools (create_*/modify_*/delete_*) "
+                "to author and edit the model; the KG v2 projection follows "
+                "automatically. Use the kg_v2_* read tools for structural "
+                "and historical lookups, kg_v2_annotate for semantic "
+                "relations. Avoid store_*_data: off-policy. Make as few "
+                "tool calls as possible and do not restate the full "
+                "project unless explicitly asked.)",
+    },
 }
 
 # Pairs to report ratios for, when both profiles are present.
@@ -287,14 +312,16 @@ def main() -> int:
                          "<out>/snapshots/ for per-scenario verification")
     ap.add_argument("--no-reset", action="store_true",
                     help="do not wipe KG_HOME / revit-data.db before each profile")
-    ap.add_argument("--steer", choices=["flat", "kg", "kg-many"], default=None,
+    ap.add_argument("--steer", choices=["flat", "kg", "kg-many", "v2-kg"], default=None,
                     help="override the per-prompt steering SUFFIX profile "
                          "for ALL profiles (default: per-slot label). The "
                          "seed-vs-edit scenario class still selects the "
                          "heavy/lean variant within the chosen profile. Use "
                          "'kg-many' to benchmark the SHIPPED claude-in-revit "
                          "bulk policy (prefer *_many) — required for a "
-                         "faithful v1-vs-PoC A/B (étape 6, BENCHMARK-v1.md).")
+                         "faithful v1-vs-PoC A/B (étape 6, BENCHMARK-v1.md). "
+                         "Use 'v2-kg' for stack C: Revit-direct mutations + "
+                         "kg_v2_* reads (DESIGN-kg-v2).")
     ap.add_argument("--yes", action="store_true",
                     help="required: confirms you accept REAL billable API calls")
     args = ap.parse_args()
