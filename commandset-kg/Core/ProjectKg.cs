@@ -14,6 +14,10 @@ namespace RevitMCPKgCommandSet.Core
         private readonly Dictionary<string, HashSet<EdgeKey>> _incoming = new Dictionary<string, HashSet<EdgeKey>>();
         private readonly List<ActionLogEntry> _actionLog = new List<ActionLogEntry>();
         private readonly Dictionary<string, int> _counters = new Dictionary<string, int>();
+        // User-defined semantic node types (e.g. Suite, Zone) authored at
+        // runtime. Free-form attrs, no Revit binding. Per-instance so a
+        // type declared in one document never leaks into another.
+        private readonly HashSet<string> _userTypes = new HashSet<string>();
 
         private int _turn;
         private IDeltaSink _sink;
@@ -132,6 +136,67 @@ namespace RevitMCPKgCommandSet.Core
             return llmId;
         }
 
+        public bool IsUserType(string nodeType) => _userTypes.Contains(nodeType);
+
+        // Create a user-authored semantic node (Suite, Zone, ...). Unlike
+        // AddNode it has NO schema: any attr keys are accepted and there are
+        // no required attrs. The type name must not collide with a built-in
+        // (Revit-projected) type — those are owned by the projection and
+        // would be ambiguous to query/drift. The node carries no revit_id,
+        // so it is invisible to drift detection and never touched by rescan.
+        public string AddUserNode(string nodeType, Dictionary<string, object> attrs, string llmId = null, bool emitLog = true)
+        {
+            if (string.IsNullOrWhiteSpace(nodeType))
+                throw new ArgumentException("node_type required");
+            if (NodeTypeRegistry.IsKnown(nodeType))
+                throw new ArgumentException($"'{nodeType}' is a built-in node type; user types must use a distinct name");
+            attrs = attrs ?? new Dictionary<string, object>();
+
+            _userTypes.Add(nodeType);
+
+            if (llmId == null)
+            {
+                llmId = NextLlmId(nodeType);
+            }
+            else
+            {
+                BumpCounterFromLlmId(nodeType, llmId);
+            }
+            if (_nodes.ContainsKey(llmId))
+                throw new ArgumentException($"llm_id already in graph: {llmId}");
+
+            var fullAttrs = new Dictionary<string, object>(attrs)
+            {
+                [LifecycleAttrs.Type] = nodeType,
+                [LifecycleAttrs.CreatedAt] = _turn,
+                [LifecycleAttrs.ModifiedAt] = new List<int>(),
+                [LifecycleAttrs.DeletedAt] = null,
+            };
+
+            _nodes[llmId] = new Node(llmId, nodeType, fullAttrs);
+
+            if (emitLog)
+            {
+                _actionLog.Add(new ActionLogEntry(_turn, "create", llmId, new Dictionary<string, object>
+                {
+                    ["node_type"] = nodeType,
+                    ["attrs"] = new Dictionary<string, object>(attrs),
+                    ["user_defined"] = true,
+                }));
+            }
+
+            _sink?.Emit(new DeltaEntry
+            {
+                Turn = _turn,
+                Op = DeltaOps.CreateUserNode,
+                Id = llmId,
+                NodeType = nodeType,
+                Attrs = new Dictionary<string, object>(attrs),
+            });
+
+            return llmId;
+        }
+
         public void ModifyNode(string llmId, Dictionary<string, object> updates)
         {
             if (!_nodes.TryGetValue(llmId, out var node))
@@ -139,13 +204,18 @@ namespace RevitMCPKgCommandSet.Core
             if (node.IsSoftDeleted)
                 throw new InvalidOperationException($"Node {llmId} is soft-deleted");
 
-            var spec = NodeTypeRegistry.Get(node.NodeType);
             var updateKeys = new HashSet<string>(updates.Keys);
-            var unknown = new HashSet<string>(updateKeys);
-            unknown.ExceptWith(spec.Required);
-            unknown.ExceptWith(spec.Optional);
-            if (unknown.Count > 0)
-                throw new ArgumentException($"Unknown attrs for {node.NodeType}: {string.Join(",", unknown.OrderBy(x => x))}");
+            // User-defined types are free-form: any attr key is allowed.
+            // Built-in types validate against their closed schema.
+            if (!_userTypes.Contains(node.NodeType))
+            {
+                var spec = NodeTypeRegistry.Get(node.NodeType);
+                var unknown = new HashSet<string>(updateKeys);
+                unknown.ExceptWith(spec.Required);
+                unknown.ExceptWith(spec.Optional);
+                if (unknown.Count > 0)
+                    throw new ArgumentException($"Unknown attrs for {node.NodeType}: {string.Join(",", unknown.OrderBy(x => x))}");
+            }
 
             var before = new Dictionary<string, object>();
             foreach (var k in updateKeys)
@@ -373,6 +443,7 @@ namespace RevitMCPKgCommandSet.Core
             public Dictionary<string, HashSet<EdgeKey>> Incoming;
             public List<ActionLogEntry> ActionLog;
             public Dictionary<string, int> Counters;
+            public HashSet<string> UserTypes;
             public int Turn;
         }
 
@@ -386,6 +457,7 @@ namespace RevitMCPKgCommandSet.Core
                 Incoming = _incoming.ToDictionary(kvp => kvp.Key, kvp => new HashSet<EdgeKey>(kvp.Value)),
                 ActionLog = _actionLog.Select(e => e.Clone()).ToList(),
                 Counters = new Dictionary<string, int>(_counters),
+                UserTypes = new HashSet<string>(_userTypes),
                 Turn = _turn,
             };
         }
@@ -404,6 +476,8 @@ namespace RevitMCPKgCommandSet.Core
             _actionLog.AddRange(snap.ActionLog);
             _counters.Clear();
             foreach (var kvp in snap.Counters) _counters[kvp.Key] = kvp.Value;
+            _userTypes.Clear();
+            foreach (var t in snap.UserTypes) _userTypes.Add(t);
             _turn = snap.Turn;
         }
 

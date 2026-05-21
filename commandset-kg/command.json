@@ -40,7 +40,22 @@
     },
     {
       "commandName": "kg_annotate",
-      "description": "Author/replace/delete an F2 semantic annotation edge (replaced_by | tagged | violates_rule | implements_intent). Required: src, dst (llm_ids, may be soft-deleted), kind. Payload object = upsert/replace; payload null/absent = delete if present. Annotations survive undo/redo per DESIGN §6.",
+      "description": "Author/replace/delete an F2 semantic annotation edge (replaced_by | tagged | violates_rule | implements_intent | contains). Required: src, dst (llm_ids, may be soft-deleted), kind. 'contains' groups existing nodes under a user-defined node (e.g. a Suite containing Rooms). Payload object = upsert/replace; payload null/absent = delete if present. Annotations survive undo/redo per DESIGN §6.",
+      "assemblyPath": "RevitMCPKgCommandSet.dll"
+    },
+    {
+      "commandName": "kg_create_node",
+      "description": "Create a USER-DEFINED semantic node not derived from Revit (e.g. Suite, Zone, Apartment). Required: node_type (must not collide with a built-in Revit-projected type). Optional: attrs (free-form JSON object, no schema). Returns the new llm_id. Link it to existing nodes with kg_annotate kind=contains. Carries no revit_id, so it is invisible to drift detection and untouched by rescan.",
+      "assemblyPath": "RevitMCPKgCommandSet.dll"
+    },
+    {
+      "commandName": "kg_modify_node",
+      "description": "Modify attrs of a user-defined node (free-form). Required: llm_id, updates (JSON object). Refuses Revit-projected nodes — edit those in Revit, not the KG.",
+      "assemblyPath": "RevitMCPKgCommandSet.dll"
+    },
+    {
+      "commandName": "kg_delete_node",
+      "description": "Soft-delete a user-defined node (history kept). Required: llm_id. Refuses Revit-projected nodes — delete those in Revit and let the projection tombstone them.",
       "assemblyPath": "RevitMCPKgCommandSet.dll"
     },
     {

@@ -50,6 +50,9 @@ namespace RevitMCPKgCommandSet.Core
                 case DeltaOps.CreateNode:
                     kg.AddNode(e.NodeType, e.Attrs ?? new Dictionary<string, object>(), llmId: e.Id);
                     break;
+                case DeltaOps.CreateUserNode:
+                    kg.AddUserNode(e.NodeType, e.Attrs ?? new Dictionary<string, object>(), llmId: e.Id);
+                    break;
                 case DeltaOps.ModifyNode:
                     kg.ModifyNode(e.Id, e.Updates ?? new Dictionary<string, object>());
                     break;

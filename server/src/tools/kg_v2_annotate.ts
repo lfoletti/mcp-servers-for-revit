@@ -8,6 +8,7 @@ const KindSchema = z.enum([
   "tagged",
   "violates_rule",
   "implements_intent",
+  "contains",
 ]);
 
 export function registerKgV2AnnotateTool(server: McpServer) {
@@ -15,9 +16,9 @@ export function registerKgV2AnnotateTool(server: McpServer) {
   if (!kgV2ToolsEnabled()) return;
   server.tool(
     "kg_v2_annotate",
-    "Author / replace / delete an F2 semantic annotation edge between two KG nodes. Supported kinds: replaced_by (audit trail for Rebind), tagged (free-form labels), violates_rule (KB compliance pointer), implements_intent (design intent registry pointer). The KB / intent-registry validators are out of scope for v2.0 — payload is free-form. Pass a payload object to upsert/replace ; omit payload or pass null to delete the edge if it exists (idempotent, no-op otherwise). Annotations accept soft-deleted src/dst and survive undo/redo by design (§6).",
+    "Author / replace / delete an F2 semantic annotation edge between two KG nodes. Supported kinds: replaced_by (audit trail for Rebind), tagged (free-form labels), violates_rule (KB compliance pointer), implements_intent (design intent registry pointer), contains (membership: a user-defined node such as a Suite groups existing nodes like Rooms — src=container, dst=member). The KB / intent-registry validators are out of scope for v2.0 — payload is free-form. Pass a payload object to upsert/replace ; omit payload or pass null to delete the edge if it exists (idempotent, no-op otherwise). Annotations accept soft-deleted src/dst and survive undo/redo by design (§6).",
     {
-      kind: KindSchema.describe("Annotation kind (replaced_by | tagged | violates_rule | implements_intent)."),
+      kind: KindSchema.describe("Annotation kind (replaced_by | tagged | violates_rule | implements_intent | contains)."),
       src: z.string().describe("Source llm_id (may be soft-deleted)."),
       dst: z.string().describe("Destination llm_id (may be soft-deleted)."),
       payload: z

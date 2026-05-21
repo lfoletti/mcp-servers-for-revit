@@ -5,6 +5,9 @@ namespace RevitMCPKgCommandSet.Core
     public static class DeltaOps
     {
         public const string CreateNode = "create_node";
+        // User-authored semantic node (not derived from Revit). Free-form
+        // attrs, no schema. Replay re-registers the type before adding.
+        public const string CreateUserNode = "create_user_node";
         public const string ModifyNode = "modify_node";
         public const string SoftDelete = "soft_delete";
         public const string Resurrect = "resurrect";

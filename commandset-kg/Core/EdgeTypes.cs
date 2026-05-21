@@ -22,6 +22,10 @@ namespace RevitMCPKgCommandSet.Core
         public const string Tagged = "tagged";
         public const string ViolatesRule = "violates_rule";
         public const string ImplementsIntent = "implements_intent";
+        // Membership: a user-defined semantic node (e.g. Suite, Zone)
+        // groups existing nodes (Rooms, Walls, ...). KG-owned like every
+        // F2 edge — never repatched by projection, survives undo/redo.
+        public const string Contains = "contains";
 
         public static readonly HashSet<string> F1 = new HashSet<string>
         {
@@ -30,13 +34,13 @@ namespace RevitMCPKgCommandSet.Core
 
         public static readonly HashSet<string> F2 = new HashSet<string>
         {
-            ReplacedBy, Tagged, ViolatesRule, ImplementsIntent,
+            ReplacedBy, Tagged, ViolatesRule, ImplementsIntent, Contains,
         };
 
         public static readonly HashSet<string> All = new HashSet<string>
         {
             AtLevel, IsType, Hosts, BoundedBy, ConnectsAt, DerivedFrom,
-            ReplacedBy, Tagged, ViolatesRule, ImplementsIntent,
+            ReplacedBy, Tagged, ViolatesRule, ImplementsIntent, Contains,
         };
     }
 }
