@@ -61,6 +61,24 @@ namespace RevitMCPKgCommandSet.Tests
                 new EdgeSpec(wallTypeEid, EdgeTypes.IsType),
             };
         }
+
+        public void AddRoom(long eid, long levelEid, string name, double area, params long[] boundaryWallEids)
+        {
+            Types[eid] = "Room";
+            var attrs = new Dictionary<string, object>
+            {
+                ["name"] = name,
+                ["level_ref"] = $"revit_{levelEid}",
+                ["area"] = area,
+            };
+            if (boundaryWallEids.Length > 0)
+                attrs["boundary_walls"] = boundaryWallEids.Select(w => $"revit_{w}").ToList();
+            Attrs[eid] = attrs;
+
+            var edges = new List<EdgeSpec> { new EdgeSpec(levelEid, EdgeTypes.AtLevel) };
+            edges.AddRange(boundaryWallEids.Select(w => new EdgeSpec(w, EdgeTypes.BoundedBy)));
+            Edges[eid] = edges;
+        }
     }
 
     public class ProjectionTests
@@ -77,6 +95,32 @@ namespace RevitMCPKgCommandSet.Tests
             Assert.Equal(0, stats.EdgesAffected);
             Assert.Equal(1, kg.NodeCount);
             Assert.Equal("level_001", kg.FindByRevitId(1001));
+        }
+
+        [Fact]
+        public void ApplyAdded_projects_room_with_level_and_boundary_edges()
+        {
+            // Regression: Room was schema-declared but never projected, so
+            // kg_v2_query type=Room returned 0 nodes. The reader now emits
+            // Room attrs + at_level/bounded_by edges; this asserts the
+            // generic pipeline accepts them and wires both edge kinds.
+            var kg = new ProjectKg("p1");
+            var fake = new FakeElementReader();
+            fake.AddLevel(1001, "N0", 0.0);
+            fake.AddWallType(2001, "WT200", 0.2);
+            fake.AddWall(3001, 1001, 2001, new[] { 0.0, 0.0 }, new[] { 5.0, 0.0 }, 5.0, 3.0);
+            fake.AddWall(3002, 1001, 2001, new[] { 5.0, 0.0 }, new[] { 5.0, 5.0 }, 5.0, 3.0);
+            fake.AddRoom(4001, levelEid: 1001, name: "Bureau", area: 25.0,
+                boundaryWallEids: new long[] { 3001, 3002 });
+
+            var stats = Projection.ApplyAdded(kg, fake, new long[] { 1001, 2001, 3001, 3002, 4001 });
+
+            var roomLlmId = kg.FindByRevitId(4001);
+            Assert.NotNull(roomLlmId);
+            Assert.Equal("Room", kg.GetNode(roomLlmId).NodeType);
+            Assert.Single(kg.OutgoingEdges(roomLlmId, EdgeTypes.AtLevel));
+            Assert.Equal(2, kg.OutgoingEdges(roomLlmId, EdgeTypes.BoundedBy).Count());
+            Assert.Single(kg.NodesOfType("Room"));
         }
 
         [Fact]

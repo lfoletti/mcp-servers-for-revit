@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Autodesk.Revit.DB;
+using Autodesk.Revit.DB.Architecture;
 using RevitMCPKgCommandSet.Core;
 
 namespace RevitMCPKgCommandSet.Services
@@ -9,6 +10,7 @@ namespace RevitMCPKgCommandSet.Services
     public sealed class RevitElementReader : IElementReader
     {
         private const double FeetToMetres = 0.3048;
+        private const double SqFeetToSqMetres = FeetToMetres * FeetToMetres;
         // Revit stores lengths in feet internally; * 0.3048 yields the classic
         // double-precision tail (2.7499999999999996, 5.99999999999998, ...).
         // Round at the source so every downstream consumer — projection,
@@ -39,6 +41,7 @@ namespace RevitMCPKgCommandSet.Services
                 case Level lvl: return ReadLevelAttrs(lvl);
                 case WallType wt: return ReadWallTypeAttrs(wt);
                 case Wall w: return ReadWallAttrs(w);
+                case Room room: return ReadRoomAttrs(room);
                 case FamilyInstance fi: return IsOpening(fi) ? ReadOpeningAttrs(fi) : null;
                 case FamilySymbol fs: return IsOpeningSymbol(fs) ? ReadFamilyTypeAttrs(fs) : null;
                 default: return null;
@@ -49,7 +52,7 @@ namespace RevitMCPKgCommandSet.Services
         {
             // Mirrors KgV2DocumentWatcher.BootstrapDocument's scan classes
             // (Level, WallType, FamilySymbol-of-openings, Wall,
-            // FamilyInstance-of-openings) so drift detection covers
+            // FamilyInstance-of-openings, Room) so drift detection covers
             // exactly the node-type surface the projection knows about.
             var ids = new List<long>();
 
@@ -82,6 +85,12 @@ namespace RevitMCPKgCommandSet.Services
                 .OfClass(typeof(FamilyInstance))
                 .Cast<FamilyInstance>()
                 .Where(IsOpening)
+                .Select(e => SafeIdValue(e.Id))
+                .Where(v => v > 0));
+
+            ids.AddRange(new FilteredElementCollector(_doc)
+                .OfCategory(BuiltInCategory.OST_Rooms)
+                .WhereElementIsNotElementType()
                 .Select(e => SafeIdValue(e.Id))
                 .Where(v => v > 0));
 
@@ -120,6 +129,14 @@ namespace RevitMCPKgCommandSet.Services
                     if (lvlId > 0) yield return new EdgeSpec(lvlId, EdgeTypes.AtLevel);
                     break;
                 }
+                case Room room:
+                {
+                    var lvlId = SafeIdValue(room.LevelId);
+                    if (lvlId > 0) yield return new EdgeSpec(lvlId, EdgeTypes.AtLevel);
+                    foreach (var wallId in ReadBoundaryWallIds(room))
+                        yield return new EdgeSpec(wallId, EdgeTypes.BoundedBy);
+                    break;
+                }
             }
         }
 
@@ -133,6 +150,7 @@ namespace RevitMCPKgCommandSet.Services
                 case Level _: return "Level";
                 case WallType _: return "WallType";
                 case Wall _: return "Wall";
+                case Room _: return "Room";
                 case FamilyInstance fi:
                     if (IsCategory(fi, BuiltInCategory.OST_Windows)) return "Window";
                     if (IsCategory(fi, BuiltInCategory.OST_Doors)) return "Door";
@@ -227,6 +245,58 @@ namespace RevitMCPKgCommandSet.Services
                 ["category"] = fs.Category?.Name ?? string.Empty,
             };
 
+        private Dictionary<string, object> ReadRoomAttrs(Room room)
+        {
+            // Room.Name on its own can fold in the number ("Bureau 12");
+            // ROOM_NAME isolates the user-facing name, with a defensive
+            // fallback to Element.Name.
+            var name = TryGetParamString(room, BuiltInParameter.ROOM_NAME);
+            if (string.IsNullOrEmpty(name)) name = room.Name ?? string.Empty;
+
+            var attrs = new Dictionary<string, object>
+            {
+                ["name"] = name,
+                ["level_ref"] = $"revit_{SafeIdValue(room.LevelId)}",
+                // Area is stored in square feet internally; metres² to match
+                // every other KG v2 spatial attr. 0 for unplaced/unenclosed.
+                ["area"] = RoundM(room.Area * SqFeetToSqMetres),
+            };
+
+            var boundaryWalls = ReadBoundaryWallIds(room)
+                .Select(id => $"revit_{id}")
+                .ToList();
+            if (boundaryWalls.Count > 0) attrs["boundary_walls"] = boundaryWalls;
+
+            return attrs;
+        }
+
+        // Distinct Wall ElementIds that bound the room (Finish location).
+        // Non-wall boundary segments (separation lines, other rooms) and
+        // unenclosed rooms yield nothing. Not an iterator so the
+        // GetBoundarySegments call can sit inside a try/catch.
+        private List<long> ReadBoundaryWallIds(Room room)
+        {
+            var result = new List<long>();
+            var seen = new HashSet<long>();
+            IList<IList<BoundarySegment>> loops;
+            try { loops = room.GetBoundarySegments(new SpatialElementBoundaryOptions()); }
+            catch { return result; }
+            if (loops == null) return result;
+
+            foreach (var loop in loops)
+            {
+                if (loop == null) continue;
+                foreach (var seg in loop)
+                {
+                    if (seg == null) continue;
+                    var id = SafeIdValue(seg.ElementId);
+                    if (id <= 0 || !seen.Add(id)) continue;
+                    if (GetElement(id) is Wall) result.Add(id);
+                }
+            }
+            return result;
+        }
+
         // ---- helpers ----
 
         private Element GetElement(long elementId)
@@ -249,6 +319,16 @@ namespace RevitMCPKgCommandSet.Services
                 var p = el.get_Parameter(bip);
                 if (p == null || !p.HasValue) return null;
                 return RoundM(p.AsDouble() * FeetToMetres);
+            }
+            catch { return null; }
+        }
+
+        private static string TryGetParamString(Element el, BuiltInParameter bip)
+        {
+            try
+            {
+                var p = el.get_Parameter(bip);
+                return p != null && p.HasValue ? p.AsString() : null;
             }
             catch { return null; }
         }

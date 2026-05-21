@@ -167,6 +167,7 @@ namespace RevitMCPKgCommandSet.Services
                     ScanFamilySymbols(doc, kg, reader);
                     ScanAndProject(doc, kg, reader, typeof(Wall));
                     ScanFamilyInstances(doc, kg, reader);
+                    ScanRooms(doc, kg, reader);
                     sink.Flush();
                 }
 
@@ -212,6 +213,18 @@ namespace RevitMCPKgCommandSet.Services
                              (fi.Category.Id.Value == (long)BuiltInCategory.OST_Windows ||
                               fi.Category.Id.Value == (long)BuiltInCategory.OST_Doors))
                 .Select(fi => fi.Id.Value)
+                .ToList();
+            Projection.ApplyAdded(kg, reader, ids);
+        }
+
+        // Rooms are scanned last so their bounded_by edges resolve against
+        // walls already projected this bootstrap pass.
+        private static void ScanRooms(Document doc, ProjectKg kg, RevitElementReader reader)
+        {
+            var ids = new FilteredElementCollector(doc)
+                .OfCategory(BuiltInCategory.OST_Rooms)
+                .WhereElementIsNotElementType()
+                .Select(e => e.Id.Value)
                 .ToList();
             Projection.ApplyAdded(kg, reader, ids);
         }
