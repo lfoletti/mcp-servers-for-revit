@@ -18,6 +18,9 @@
 
     <ItemGroup>
         <Compile Include="..\commandset-kg\Core\*.cs" LinkBase="Core" />
+        <!-- Core (e.g. NodeAggregator) references dependency-light DTOs in
+             Models (Newtonsoft + Core types only, no SDK/Autodesk refs). -->
+        <Compile Include="..\commandset-kg\Models\*.cs" LinkBase="Models" />
     </ItemGroup>
 
 </Project>

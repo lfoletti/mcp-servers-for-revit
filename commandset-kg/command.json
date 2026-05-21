@@ -40,7 +40,7 @@
     },
     {
       "commandName": "kg_annotate",
-      "description": "Author/replace/delete an F2 semantic annotation edge (replaced_by | tagged | violates_rule | implements_intent | contains). Required: src, dst (llm_ids, may be soft-deleted), kind. 'contains' groups existing nodes under a user-defined node (e.g. a Suite containing Rooms). Payload object = upsert/replace; payload null/absent = delete if present. Annotations survive undo/redo per DESIGN §6.",
+      "description": "Author/replace/delete a semantic (KG-owned) edge. Built-in kinds: replaced_by | tagged | violates_rule | implements_intent | contains. Any other name = a USER-DEFINED edge type, registered on first use (symmetric to user-defined node types); Revit-owned F1 types (at_level, is_type, hosts, bounded_by, connects_at, derived_from) are rejected. Required: src, dst (llm_ids, may be soft-deleted), kind. 'contains' groups existing nodes under a user-defined node (e.g. a Suite containing Rooms). Payload object = upsert/replace; payload null/absent = delete if present. Edges survive Revit re-projection and undo/redo per DESIGN §6.",
       "assemblyPath": "RevitMCPKgCommandSet.dll"
     },
     {

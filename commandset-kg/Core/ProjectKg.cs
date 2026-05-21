@@ -18,6 +18,12 @@ namespace RevitMCPKgCommandSet.Core
         // runtime. Free-form attrs, no Revit binding. Per-instance so a
         // type declared in one document never leaks into another.
         private readonly HashSet<string> _userTypes = new HashSet<string>();
+        // User-defined semantic EDGE types (e.g. adjacent_to) authored at
+        // runtime via Annotate, symmetric to _userTypes for nodes. KG-owned
+        // like every F2 edge: never emitted/repatched by the Revit projection
+        // (so they survive re-projection), and must not collide with an F1
+        // (Revit-owned) edge type. Registered on first authoring use.
+        private readonly HashSet<string> _userEdgeTypes = new HashSet<string>();
 
         private int _turn;
         private IDeltaSink _sink;
@@ -137,6 +143,10 @@ namespace RevitMCPKgCommandSet.Core
         }
 
         public bool IsUserType(string nodeType) => _userTypes.Contains(nodeType);
+
+        public bool IsUserEdgeType(string edgeType) => _userEdgeTypes.Contains(edgeType);
+
+        public IReadOnlyCollection<string> UserEdgeTypes => _userEdgeTypes;
 
         // Create a user-authored semantic node (Suite, Zone, ...). Unlike
         // AddNode it has NO schema: any attr keys are accepted and there are
@@ -340,12 +350,25 @@ namespace RevitMCPKgCommandSet.Core
         // otherwise. Accepts soft-deleted src/dst so the audit trail
         // (replaced_by, etc.) can outlive the tombstoning of its anchors.
         // Emits exactly one DeltaOps.Annotate entry (or none on no-op).
+        //
+        // `kind` is either a built-in F2 type (replaced_by, tagged, ...) or a
+        // USER-DEFINED edge type (symmetric to AddUserNode): any name that is
+        // not a Revit-owned F1 type is accepted and registered on first
+        // authoring use. F1 types are owned by the projection and rejected.
         public string Annotate(string src, string dst, string kind, Dictionary<string, object> payload)
         {
-            if (!EdgeTypes.F2.Contains(kind))
-                throw new ArgumentException($"Not an F2 annotation edge type: {kind}");
+            if (string.IsNullOrWhiteSpace(kind))
+                throw new ArgumentException("edge kind required");
+            if (EdgeTypes.F1.Contains(kind))
+                throw new ArgumentException($"'{kind}' is a Revit-owned (F1) edge type; it is maintained by the projection and cannot be authored");
             if (!_nodes.ContainsKey(src)) throw new KeyNotFoundException($"src: {src}");
             if (!_nodes.ContainsKey(dst)) throw new KeyNotFoundException($"dst: {dst}");
+
+            // Anything that is neither F1 nor a built-in F2 annotation is a
+            // user-defined edge type. Register it when we actually author an
+            // edge (upsert path below); a pure delete/no-op of an unknown
+            // type registers nothing, mirroring node-type semantics.
+            bool isUserEdge = !EdgeTypes.F2.Contains(kind);
 
             var key = new EdgeKey(src, dst, kind);
             var exists = _edges.TryGetValue(key, out var existing);
@@ -370,6 +393,8 @@ namespace RevitMCPKgCommandSet.Core
                 return "delete";
             }
 
+            if (isUserEdge) _userEdgeTypes.Add(kind);
+
             var attrsCopy = new Dictionary<string, object>(payload);
             if (exists)
             {
@@ -388,6 +413,7 @@ namespace RevitMCPKgCommandSet.Core
             {
                 ["edge_type"] = kind,
                 ["payload"] = new Dictionary<string, object>(payload),
+                ["user_defined"] = isUserEdge,
             }));
             _sink?.Emit(new DeltaEntry
             {
@@ -444,6 +470,7 @@ namespace RevitMCPKgCommandSet.Core
             public List<ActionLogEntry> ActionLog;
             public Dictionary<string, int> Counters;
             public HashSet<string> UserTypes;
+            public HashSet<string> UserEdgeTypes;
             public int Turn;
         }
 
@@ -458,6 +485,7 @@ namespace RevitMCPKgCommandSet.Core
                 ActionLog = _actionLog.Select(e => e.Clone()).ToList(),
                 Counters = new Dictionary<string, int>(_counters),
                 UserTypes = new HashSet<string>(_userTypes),
+                UserEdgeTypes = new HashSet<string>(_userEdgeTypes),
                 Turn = _turn,
             };
         }
@@ -478,6 +506,8 @@ namespace RevitMCPKgCommandSet.Core
             foreach (var kvp in snap.Counters) _counters[kvp.Key] = kvp.Value;
             _userTypes.Clear();
             foreach (var t in snap.UserTypes) _userTypes.Add(t);
+            _userEdgeTypes.Clear();
+            foreach (var t in snap.UserEdgeTypes) _userEdgeTypes.Add(t);
             _turn = snap.Turn;
         }
 
