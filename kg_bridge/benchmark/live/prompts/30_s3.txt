@@ -1,5 +1,0 @@
-S3 — structural query.
-
-Using only your project-memory tools, answer for project "Demo": which
-windows are on level N0, and for each window, which wall hosts it? Return the
-window-to-host-wall mapping explicitly.

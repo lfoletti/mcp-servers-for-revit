@@ -1,7 +1,0 @@
-S5 — drift / out-of-band change.
-
-Assume a user edited project "Demo" by hand outside your tools (for example,
-deleted a wall or moved a window). Using your project-memory tools, determine
-whether your tracked state can detect such a divergence from reality, and if
-so, report how you would reconcile it. If your tools cannot detect it, say so
-explicitly and explain why.

@@ -1,6 +1,0 @@
-S1 — incremental change.
-
-First, raise the height of the first wall of project "Demo" to 3.2 m and
-persist that change. Then answer: what exactly has changed in the project
-since it was seeded? Be precise (which element, old vs new value). Rely only
-on your project-memory tools, not on memory of this conversation.

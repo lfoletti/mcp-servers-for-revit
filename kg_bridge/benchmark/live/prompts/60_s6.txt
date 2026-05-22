@@ -1,5 +1,0 @@
-S6 - bulk multi-element edit.
-
-In project "Demo", set the sill height of ALL windows to 0.8 m, then confirm
-by listing each window with its new sill height. Use only your project-memory
-tools; rely on them (not this conversation) to enumerate the windows.

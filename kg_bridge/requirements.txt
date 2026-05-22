@@ -1,3 +1,0 @@
-# Sidecar runtime dependency. The vendored ProjectKG uses only the Python
-# standard library plus NetworkX.
-networkx>=3.0

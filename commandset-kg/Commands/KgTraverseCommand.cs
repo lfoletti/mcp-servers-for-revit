@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Autodesk.Revit.UI;
 using Newtonsoft.Json.Linq;
 using RevitMCPKgCommandSet.Core;
@@ -27,17 +28,42 @@ namespace RevitMCPKgCommandSet.Commands
                 if (string.IsNullOrEmpty(startId))
                     throw new ArgumentException("start_id required");
 
+                // Reachability (variable-depth BFS) mode: triggered by
+                // `edge_types` and/or `max_depth`. Distinct from the fixed
+                // `path` mode below.
+                var edgeTypesTok = parameters?["edge_types"] as JArray;
+                var maxDepthTok = parameters?["max_depth"];
+                if (edgeTypesTok != null || maxDepthTok != null)
+                {
+                    var edgeTypes = edgeTypesTok == null
+                        ? new HashSet<string>()
+                        : new HashSet<string>(edgeTypesTok.Select(x => x.ToString()));
+                    int maxDepth = maxDepthTok?.Value<int>() ?? 8;
+                    var dirStr = (parameters?["direction"]?.ToString() ?? "any").ToLowerInvariant();
+                    EdgeDirection? dir =
+                        (dirStr == "out" || dirStr == "outgoing") ? EdgeDirection.Outgoing :
+                        (dirStr == "in" || dirStr == "incoming") ? EdgeDirection.Incoming :
+                        (EdgeDirection?)null; // "any" / "both"
+                    bool includeSoftDeleted = parameters?["include_soft_deleted"]?.Value<bool>() ?? false;
+
+                    _handler.SetReachabilityParameters(startId, edgeTypes, dir, maxDepth, includeSoftDeleted);
+
+                    if (RaiseAndWaitForCompletion(15000))
+                        return _handler.Result;
+                    throw new TimeoutException("kg_traverse (reachable) timed out");
+                }
+
                 var path = new List<TraverseStep>();
                 if (parameters?["path"] is JArray arr)
                 {
                     foreach (var step in arr)
                     {
                         var edgeType = step?["edge_type"]?.ToString();
-                        var dirStr = (step?["direction"]?.ToString() ?? "out").ToLowerInvariant();
-                        var dir = (dirStr == "in" || dirStr == "incoming")
+                        var dirStr2 = (step?["direction"]?.ToString() ?? "out").ToLowerInvariant();
+                        var dir2 = (dirStr2 == "in" || dirStr2 == "incoming")
                             ? EdgeDirection.Incoming
                             : EdgeDirection.Outgoing;
-                        path.Add(new TraverseStep { EdgeType = edgeType, Direction = dir });
+                        path.Add(new TraverseStep { EdgeType = edgeType, Direction = dir2 });
                     }
                 }
 
