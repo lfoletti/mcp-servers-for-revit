@@ -2,7 +2,6 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using RevitMCPSDK.API.Interfaces;
 using RevitMCPCommandSet.Models.Common;
-using RevitMCPCommandSet.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -198,7 +197,7 @@ namespace RevitMCPCommandSet.Services
                     // 在3D视图中启用并设置剖切框
                     using (Transaction trans = new Transaction(doc, "创建剖切框"))
                     {
-                        trans.StartWithSwallowedWarnings();
+                        trans.Start();
                         targetView.IsSectionBoxActive = true;
                         targetView.SetSectionBox(boundingBox);
                         trans.Commit();
@@ -212,7 +211,7 @@ namespace RevitMCPCommandSet.Services
                     // 将元素设置为指定颜色
                     using (Transaction trans = new Transaction(doc, "设置元素颜色"))
                     {
-                        trans.StartWithSwallowedWarnings();
+                        trans.Start();
                         SetElementsColor(doc, elementIds, setting.ColorValue);
                         trans.Commit();
                     }
@@ -225,7 +224,7 @@ namespace RevitMCPCommandSet.Services
                     // 设置元素在当前视图中的透明度
                     using (Transaction trans = new Transaction(doc, "设置元素透明度"))
                     {
-                        trans.StartWithSwallowedWarnings();
+                        trans.Start();
 
                         // 创建图形覆盖设置对象
                         OverrideGraphicSettings overrideSettings = new OverrideGraphicSettings();
@@ -250,7 +249,7 @@ namespace RevitMCPCommandSet.Services
                     // 删除元素（需要事务）
                     using (Transaction trans = new Transaction(doc, "删除元素"))
                     {
-                        trans.StartWithSwallowedWarnings();
+                        trans.Start();
                         doc.Delete(elementIds);
                         trans.Commit();
                     }
@@ -260,7 +259,7 @@ namespace RevitMCPCommandSet.Services
                     // 隐藏元素（需要活动视图和事务）
                     using (Transaction trans = new Transaction(doc, "隐藏元素"))
                     {
-                        trans.StartWithSwallowedWarnings();
+                        trans.Start();
                         doc.ActiveView.HideElements(elementIds);
                         trans.Commit();
                     }
@@ -270,7 +269,7 @@ namespace RevitMCPCommandSet.Services
                     // 临时隐藏元素（需要活动视图和事务）
                     using (Transaction trans = new Transaction(doc, "临时隐藏元素"))
                     {
-                        trans.StartWithSwallowedWarnings();
+                        trans.Start();
                         doc.ActiveView.HideElementsTemporary(elementIds);
                         trans.Commit();
                     }
@@ -280,7 +279,7 @@ namespace RevitMCPCommandSet.Services
                     // 隔离元素（需要活动视图和事务）
                     using (Transaction trans = new Transaction(doc, "隔离元素"))
                     {
-                        trans.StartWithSwallowedWarnings();
+                        trans.Start();
                         doc.ActiveView.IsolateElementsTemporary(elementIds);
                         trans.Commit();
                     }
@@ -290,7 +289,7 @@ namespace RevitMCPCommandSet.Services
                     // 取消隐藏元素（需要活动视图和事务）
                     using (Transaction trans = new Transaction(doc, "取消隐藏元素"))
                     {
-                        trans.StartWithSwallowedWarnings();
+                        trans.Start();
                         doc.ActiveView.UnhideElements(elementIds);
                         trans.Commit();
                     }
@@ -300,7 +299,7 @@ namespace RevitMCPCommandSet.Services
                     // 重置隔离（需要活动视图和事务）
                     using (Transaction trans = new Transaction(doc, "重置隔离"))
                     {
-                        trans.StartWithSwallowedWarnings();
+                        trans.Start();
                         doc.ActiveView.DisableTemporaryViewMode(TemporaryViewMode.TemporaryHideIsolate);
                         trans.Commit();
                     }

@@ -42,7 +42,10 @@ namespace RevitMCPKgCommandSet.Services
                 case WallType wt: return ReadWallTypeAttrs(wt);
                 case Wall w: return ReadWallAttrs(w);
                 case Room room: return ReadRoomAttrs(room);
-                case FamilyInstance fi: return IsOpening(fi) ? ReadOpeningAttrs(fi) : null;
+                case FamilyInstance fi:
+                    if (IsOpening(fi)) return ReadOpeningAttrs(fi);
+                    if (IsFacadeElement(fi)) return ReadFacadeElementAttrs(fi);
+                    return null;
                 case FamilySymbol fs: return IsOpeningSymbol(fs) ? ReadFamilyTypeAttrs(fs) : null;
                 default: return null;
             }
@@ -89,6 +92,13 @@ namespace RevitMCPKgCommandSet.Services
                 .Where(v => v > 0));
 
             ids.AddRange(new FilteredElementCollector(_doc)
+                .OfClass(typeof(FamilyInstance))
+                .Cast<FamilyInstance>()
+                .Where(IsFacadeElement)
+                .Select(e => SafeIdValue(e.Id))
+                .Where(v => v > 0));
+
+            ids.AddRange(new FilteredElementCollector(_doc)
                 .OfCategory(BuiltInCategory.OST_Rooms)
                 .WhereElementIsNotElementType()
                 .Select(e => SafeIdValue(e.Id))
@@ -129,6 +139,22 @@ namespace RevitMCPKgCommandSet.Services
                     if (lvlId > 0) yield return new EdgeSpec(lvlId, EdgeTypes.AtLevel);
                     break;
                 }
+                case FamilyInstance fi when IsFacadeElement(fi):
+                {
+                    var lvlId = SafeIdValue(fi.LevelId);
+                    if (lvlId > 0) yield return new EdgeSpec(lvlId, EdgeTypes.AtLevel);
+
+                    // In-place façade families are usually unhosted, but a
+                    // loadable one may sit on a wall — mirror the opening
+                    // host edge when present.
+                    if (fi.Host is Wall wallHost)
+                    {
+                        var wallId = SafeIdValue(wallHost.Id);
+                        if (wallId > 0)
+                            yield return new EdgeSpec(wallId, EdgeTypes.Hosts, EdgeDirection.Incoming);
+                    }
+                    break;
+                }
                 case Room room:
                 {
                     var lvlId = SafeIdValue(room.LevelId);
@@ -154,6 +180,7 @@ namespace RevitMCPKgCommandSet.Services
                 case FamilyInstance fi:
                     if (IsCategory(fi, BuiltInCategory.OST_Windows)) return "Window";
                     if (IsCategory(fi, BuiltInCategory.OST_Doors)) return "Door";
+                    if (IsCategory(fi, BuiltInCategory.OST_Walls)) return "FacadeElement";
                     return null;
                 case FamilySymbol fs:
                     return IsOpeningSymbol(fs) ? "FamilyType" : null;
@@ -167,6 +194,13 @@ namespace RevitMCPKgCommandSet.Services
 
         private static bool IsOpeningSymbol(FamilySymbol fs) =>
             IsCategory(fs, BuiltInCategory.OST_Windows) || IsCategory(fs, BuiltInCategory.OST_Doors);
+
+        // A family instance carrying the Murs (OST_Walls) category but not of
+        // class Wall — façade decoration modelled as in-place/loadable
+        // families. Openings live in their own categories, so there is no
+        // overlap with IsOpening.
+        private static bool IsFacadeElement(FamilyInstance fi) =>
+            IsCategory(fi, BuiltInCategory.OST_Walls);
 
         private static bool IsCategory(Element el, BuiltInCategory bic)
         {
@@ -234,6 +268,21 @@ namespace RevitMCPKgCommandSet.Services
                 ["position"] = position ?? new[] { 0.0, 0.0 },
                 ["sill_height"] = sill,
                 ["head_height"] = head,
+            };
+        }
+
+        private Dictionary<string, object> ReadFacadeElementAttrs(FamilyInstance fi)
+        {
+            double[] position = null;
+            if (fi.Location is LocationPoint lp && lp.Point != null)
+                position = new[] { RoundM(lp.Point.X * FeetToMetres), RoundM(lp.Point.Y * FeetToMetres) };
+
+            return new Dictionary<string, object>
+            {
+                ["family_name"] = fi.Symbol?.Family?.Name ?? string.Empty,
+                ["type_name"] = fi.Symbol?.Name ?? fi.Name ?? string.Empty,
+                ["position"] = position ?? new[] { 0.0, 0.0 },
+                ["level_ref"] = $"revit_{SafeIdValue(fi.LevelId)}",
             };
         }
 

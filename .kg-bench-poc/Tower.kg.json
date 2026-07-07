@@ -1,0 +1,2723 @@
+{
+  "action_log": [
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "elevation": 0,
+          "name": "N0"
+        },
+        "node_type": "Level"
+      },
+      "target": "lvl_n0",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "elevation": 3,
+          "name": "N1"
+        },
+        "node_type": "Level"
+      },
+      "target": "lvl_n1",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "elevation": 6,
+          "name": "N2"
+        },
+        "node_type": "Level"
+      },
+      "target": "lvl_n2",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "name": "GEN_200",
+          "total_thickness": 0.2
+        },
+        "node_type": "WallType"
+      },
+      "target": "wt_gen200",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "height": 2.7,
+          "length": 4,
+          "level_ref": "lvl_n0",
+          "p1": [
+            0,
+            0,
+            0
+          ],
+          "p2": [
+            4,
+            0,
+            0
+          ],
+          "type_ref": "wt_gen200"
+        },
+        "node_type": "Wall"
+      },
+      "target": "wall_n0_1",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "height": 2.7,
+          "length": 4,
+          "level_ref": "lvl_n0",
+          "p1": [
+            4,
+            0,
+            0
+          ],
+          "p2": [
+            8,
+            0,
+            0
+          ],
+          "type_ref": "wt_gen200"
+        },
+        "node_type": "Wall"
+      },
+      "target": "wall_n0_2",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "height": 2.7,
+          "length": 4,
+          "level_ref": "lvl_n0",
+          "p1": [
+            8,
+            0,
+            0
+          ],
+          "p2": [
+            12,
+            0,
+            0
+          ],
+          "type_ref": "wt_gen200"
+        },
+        "node_type": "Wall"
+      },
+      "target": "wall_n0_3",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "height": 2.7,
+          "length": 4,
+          "level_ref": "lvl_n0",
+          "p1": [
+            12,
+            0,
+            0
+          ],
+          "p2": [
+            16,
+            0,
+            0
+          ],
+          "type_ref": "wt_gen200"
+        },
+        "node_type": "Wall"
+      },
+      "target": "wall_n0_4",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "height": 2.7,
+          "length": 4,
+          "level_ref": "lvl_n0",
+          "p1": [
+            16,
+            0,
+            0
+          ],
+          "p2": [
+            20,
+            0,
+            0
+          ],
+          "type_ref": "wt_gen200"
+        },
+        "node_type": "Wall"
+      },
+      "target": "wall_n0_5",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "height": 2.7,
+          "length": 4,
+          "level_ref": "lvl_n0",
+          "p1": [
+            20,
+            0,
+            0
+          ],
+          "p2": [
+            24,
+            0,
+            0
+          ],
+          "type_ref": "wt_gen200"
+        },
+        "node_type": "Wall"
+      },
+      "target": "wall_n0_6",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "height": 2.7,
+          "length": 4,
+          "level_ref": "lvl_n0",
+          "p1": [
+            24,
+            0,
+            0
+          ],
+          "p2": [
+            28,
+            0,
+            0
+          ],
+          "type_ref": "wt_gen200"
+        },
+        "node_type": "Wall"
+      },
+      "target": "wall_n0_7",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "height": 2.7,
+          "length": 4,
+          "level_ref": "lvl_n0",
+          "p1": [
+            28,
+            0,
+            0
+          ],
+          "p2": [
+            32,
+            0,
+            0
+          ],
+          "type_ref": "wt_gen200"
+        },
+        "node_type": "Wall"
+      },
+      "target": "wall_n0_8",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "height": 2.7,
+          "length": 4,
+          "level_ref": "lvl_n0",
+          "p1": [
+            32,
+            0,
+            0
+          ],
+          "p2": [
+            36,
+            0,
+            0
+          ],
+          "type_ref": "wt_gen200"
+        },
+        "node_type": "Wall"
+      },
+      "target": "wall_n0_9",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "height": 2.7,
+          "length": 4,
+          "level_ref": "lvl_n0",
+          "p1": [
+            36,
+            0,
+            0
+          ],
+          "p2": [
+            40,
+            0,
+            0
+          ],
+          "type_ref": "wt_gen200"
+        },
+        "node_type": "Wall"
+      },
+      "target": "wall_n0_10",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "height": 2.7,
+          "length": 4,
+          "level_ref": "lvl_n1",
+          "p1": [
+            0,
+            0,
+            3
+          ],
+          "p2": [
+            4,
+            0,
+            3
+          ],
+          "type_ref": "wt_gen200"
+        },
+        "node_type": "Wall"
+      },
+      "target": "wall_n1_1",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "height": 2.7,
+          "length": 4,
+          "level_ref": "lvl_n1",
+          "p1": [
+            4,
+            0,
+            3
+          ],
+          "p2": [
+            8,
+            0,
+            3
+          ],
+          "type_ref": "wt_gen200"
+        },
+        "node_type": "Wall"
+      },
+      "target": "wall_n1_2",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "height": 2.7,
+          "length": 4,
+          "level_ref": "lvl_n1",
+          "p1": [
+            8,
+            0,
+            3
+          ],
+          "p2": [
+            12,
+            0,
+            3
+          ],
+          "type_ref": "wt_gen200"
+        },
+        "node_type": "Wall"
+      },
+      "target": "wall_n1_3",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "height": 2.7,
+          "length": 4,
+          "level_ref": "lvl_n1",
+          "p1": [
+            12,
+            0,
+            3
+          ],
+          "p2": [
+            16,
+            0,
+            3
+          ],
+          "type_ref": "wt_gen200"
+        },
+        "node_type": "Wall"
+      },
+      "target": "wall_n1_4",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "height": 2.7,
+          "length": 4,
+          "level_ref": "lvl_n1",
+          "p1": [
+            16,
+            0,
+            3
+          ],
+          "p2": [
+            20,
+            0,
+            3
+          ],
+          "type_ref": "wt_gen200"
+        },
+        "node_type": "Wall"
+      },
+      "target": "wall_n1_5",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "height": 2.7,
+          "length": 4,
+          "level_ref": "lvl_n1",
+          "p1": [
+            20,
+            0,
+            3
+          ],
+          "p2": [
+            24,
+            0,
+            3
+          ],
+          "type_ref": "wt_gen200"
+        },
+        "node_type": "Wall"
+      },
+      "target": "wall_n1_6",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "height": 2.7,
+          "length": 4,
+          "level_ref": "lvl_n1",
+          "p1": [
+            24,
+            0,
+            3
+          ],
+          "p2": [
+            28,
+            0,
+            3
+          ],
+          "type_ref": "wt_gen200"
+        },
+        "node_type": "Wall"
+      },
+      "target": "wall_n1_7",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "height": 2.7,
+          "length": 4,
+          "level_ref": "lvl_n1",
+          "p1": [
+            28,
+            0,
+            3
+          ],
+          "p2": [
+            32,
+            0,
+            3
+          ],
+          "type_ref": "wt_gen200"
+        },
+        "node_type": "Wall"
+      },
+      "target": "wall_n1_8",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "height": 2.7,
+          "length": 4,
+          "level_ref": "lvl_n1",
+          "p1": [
+            32,
+            0,
+            3
+          ],
+          "p2": [
+            36,
+            0,
+            3
+          ],
+          "type_ref": "wt_gen200"
+        },
+        "node_type": "Wall"
+      },
+      "target": "wall_n1_9",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "height": 2.7,
+          "length": 4,
+          "level_ref": "lvl_n1",
+          "p1": [
+            36,
+            0,
+            3
+          ],
+          "p2": [
+            40,
+            0,
+            3
+          ],
+          "type_ref": "wt_gen200"
+        },
+        "node_type": "Wall"
+      },
+      "target": "wall_n1_10",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "height": 2.7,
+          "length": 4,
+          "level_ref": "lvl_n2",
+          "p1": [
+            0,
+            0,
+            6
+          ],
+          "p2": [
+            4,
+            0,
+            6
+          ],
+          "type_ref": "wt_gen200"
+        },
+        "node_type": "Wall"
+      },
+      "target": "wall_n2_1",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "height": 2.7,
+          "length": 4,
+          "level_ref": "lvl_n2",
+          "p1": [
+            4,
+            0,
+            6
+          ],
+          "p2": [
+            8,
+            0,
+            6
+          ],
+          "type_ref": "wt_gen200"
+        },
+        "node_type": "Wall"
+      },
+      "target": "wall_n2_2",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "height": 2.7,
+          "length": 4,
+          "level_ref": "lvl_n2",
+          "p1": [
+            8,
+            0,
+            6
+          ],
+          "p2": [
+            12,
+            0,
+            6
+          ],
+          "type_ref": "wt_gen200"
+        },
+        "node_type": "Wall"
+      },
+      "target": "wall_n2_3",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "height": 2.7,
+          "length": 4,
+          "level_ref": "lvl_n2",
+          "p1": [
+            12,
+            0,
+            6
+          ],
+          "p2": [
+            16,
+            0,
+            6
+          ],
+          "type_ref": "wt_gen200"
+        },
+        "node_type": "Wall"
+      },
+      "target": "wall_n2_4",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "height": 2.7,
+          "length": 4,
+          "level_ref": "lvl_n2",
+          "p1": [
+            16,
+            0,
+            6
+          ],
+          "p2": [
+            20,
+            0,
+            6
+          ],
+          "type_ref": "wt_gen200"
+        },
+        "node_type": "Wall"
+      },
+      "target": "wall_n2_5",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "height": 2.7,
+          "length": 4,
+          "level_ref": "lvl_n2",
+          "p1": [
+            20,
+            0,
+            6
+          ],
+          "p2": [
+            24,
+            0,
+            6
+          ],
+          "type_ref": "wt_gen200"
+        },
+        "node_type": "Wall"
+      },
+      "target": "wall_n2_6",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "height": 2.7,
+          "length": 4,
+          "level_ref": "lvl_n2",
+          "p1": [
+            24,
+            0,
+            6
+          ],
+          "p2": [
+            28,
+            0,
+            6
+          ],
+          "type_ref": "wt_gen200"
+        },
+        "node_type": "Wall"
+      },
+      "target": "wall_n2_7",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "height": 2.7,
+          "length": 4,
+          "level_ref": "lvl_n2",
+          "p1": [
+            28,
+            0,
+            6
+          ],
+          "p2": [
+            32,
+            0,
+            6
+          ],
+          "type_ref": "wt_gen200"
+        },
+        "node_type": "Wall"
+      },
+      "target": "wall_n2_8",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "height": 2.7,
+          "length": 4,
+          "level_ref": "lvl_n2",
+          "p1": [
+            32,
+            0,
+            6
+          ],
+          "p2": [
+            36,
+            0,
+            6
+          ],
+          "type_ref": "wt_gen200"
+        },
+        "node_type": "Wall"
+      },
+      "target": "wall_n2_9",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "height": 2.7,
+          "length": 4,
+          "level_ref": "lvl_n2",
+          "p1": [
+            36,
+            0,
+            6
+          ],
+          "p2": [
+            40,
+            0,
+            6
+          ],
+          "type_ref": "wt_gen200"
+        },
+        "node_type": "Wall"
+      },
+      "target": "wall_n2_10",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "head_height": 2.1,
+          "host_wall_ref": "wall_n0_1",
+          "position": [
+            2,
+            0,
+            0
+          ],
+          "sill_height": 0.6,
+          "type_ref": "WIN_GEN"
+        },
+        "node_type": "Window"
+      },
+      "target": "win_n0_1",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "head_height": 2.1,
+          "host_wall_ref": "wall_n0_2",
+          "position": [
+            6,
+            0,
+            0
+          ],
+          "sill_height": 0.6,
+          "type_ref": "WIN_GEN"
+        },
+        "node_type": "Window"
+      },
+      "target": "win_n0_2",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "head_height": 2.1,
+          "host_wall_ref": "wall_n0_3",
+          "position": [
+            10,
+            0,
+            0
+          ],
+          "sill_height": 0.6,
+          "type_ref": "WIN_GEN"
+        },
+        "node_type": "Window"
+      },
+      "target": "win_n0_3",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "head_height": 2.1,
+          "host_wall_ref": "wall_n0_4",
+          "position": [
+            14,
+            0,
+            0
+          ],
+          "sill_height": 0.6,
+          "type_ref": "WIN_GEN"
+        },
+        "node_type": "Window"
+      },
+      "target": "win_n0_4",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "head_height": 2.1,
+          "host_wall_ref": "wall_n0_5",
+          "position": [
+            18,
+            0,
+            0
+          ],
+          "sill_height": 0.6,
+          "type_ref": "WIN_GEN"
+        },
+        "node_type": "Window"
+      },
+      "target": "win_n0_5",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "head_height": 2.1,
+          "host_wall_ref": "wall_n0_6",
+          "position": [
+            22,
+            0,
+            0
+          ],
+          "sill_height": 0.6,
+          "type_ref": "WIN_GEN"
+        },
+        "node_type": "Window"
+      },
+      "target": "win_n0_6",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "head_height": 2.1,
+          "host_wall_ref": "wall_n0_7",
+          "position": [
+            26,
+            0,
+            0
+          ],
+          "sill_height": 0.6,
+          "type_ref": "WIN_GEN"
+        },
+        "node_type": "Window"
+      },
+      "target": "win_n0_7",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "head_height": 2.1,
+          "host_wall_ref": "wall_n0_8",
+          "position": [
+            30,
+            0,
+            0
+          ],
+          "sill_height": 0.6,
+          "type_ref": "WIN_GEN"
+        },
+        "node_type": "Window"
+      },
+      "target": "win_n0_8",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "head_height": 2.1,
+          "host_wall_ref": "wall_n1_1",
+          "position": [
+            2,
+            0,
+            3
+          ],
+          "sill_height": 0.9,
+          "type_ref": "WIN_GEN"
+        },
+        "node_type": "Window"
+      },
+      "target": "win_n1_1",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "head_height": 2.1,
+          "host_wall_ref": "wall_n1_2",
+          "position": [
+            6,
+            0,
+            3
+          ],
+          "sill_height": 0.9,
+          "type_ref": "WIN_GEN"
+        },
+        "node_type": "Window"
+      },
+      "target": "win_n1_2",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "head_height": 2.1,
+          "host_wall_ref": "wall_n1_3",
+          "position": [
+            10,
+            0,
+            3
+          ],
+          "sill_height": 0.9,
+          "type_ref": "WIN_GEN"
+        },
+        "node_type": "Window"
+      },
+      "target": "win_n1_3",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "head_height": 2.1,
+          "host_wall_ref": "wall_n1_4",
+          "position": [
+            14,
+            0,
+            3
+          ],
+          "sill_height": 0.9,
+          "type_ref": "WIN_GEN"
+        },
+        "node_type": "Window"
+      },
+      "target": "win_n1_4",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "head_height": 2.1,
+          "host_wall_ref": "wall_n1_5",
+          "position": [
+            18,
+            0,
+            3
+          ],
+          "sill_height": 0.9,
+          "type_ref": "WIN_GEN"
+        },
+        "node_type": "Window"
+      },
+      "target": "win_n1_5",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "head_height": 2.1,
+          "host_wall_ref": "wall_n1_6",
+          "position": [
+            22,
+            0,
+            3
+          ],
+          "sill_height": 0.9,
+          "type_ref": "WIN_GEN"
+        },
+        "node_type": "Window"
+      },
+      "target": "win_n1_6",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "head_height": 2.1,
+          "host_wall_ref": "wall_n2_1",
+          "position": [
+            2,
+            0,
+            6
+          ],
+          "sill_height": 0.6,
+          "type_ref": "WIN_GEN"
+        },
+        "node_type": "Window"
+      },
+      "target": "win_n2_1",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "head_height": 2.1,
+          "host_wall_ref": "wall_n2_2",
+          "position": [
+            6,
+            0,
+            6
+          ],
+          "sill_height": 0.6,
+          "type_ref": "WIN_GEN"
+        },
+        "node_type": "Window"
+      },
+      "target": "win_n2_2",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "head_height": 2.1,
+          "host_wall_ref": "wall_n2_3",
+          "position": [
+            10,
+            0,
+            6
+          ],
+          "sill_height": 0.6,
+          "type_ref": "WIN_GEN"
+        },
+        "node_type": "Window"
+      },
+      "target": "win_n2_3",
+      "turn": 1
+    },
+    {
+      "action": "create",
+      "details": {
+        "attrs": {
+          "head_height": 2.1,
+          "host_wall_ref": "wall_n2_4",
+          "position": [
+            14,
+            0,
+            6
+          ],
+          "sill_height": 0.6,
+          "type_ref": "WIN_GEN"
+        },
+        "node_type": "Window"
+      },
+      "target": "win_n2_4",
+      "turn": 1
+    },
+    {
+      "action": "modify",
+      "details": {
+        "after": {
+          "sill_height": 0.9
+        },
+        "before": {
+          "sill_height": 0.6
+        }
+      },
+      "target": "win_n0_1",
+      "turn": 2
+    },
+    {
+      "action": "modify",
+      "details": {
+        "after": {
+          "sill_height": 0.9
+        },
+        "before": {
+          "sill_height": 0.6
+        }
+      },
+      "target": "win_n0_2",
+      "turn": 2
+    },
+    {
+      "action": "modify",
+      "details": {
+        "after": {
+          "sill_height": 0.9
+        },
+        "before": {
+          "sill_height": 0.6
+        }
+      },
+      "target": "win_n0_3",
+      "turn": 2
+    },
+    {
+      "action": "modify",
+      "details": {
+        "after": {
+          "sill_height": 0.9
+        },
+        "before": {
+          "sill_height": 0.6
+        }
+      },
+      "target": "win_n0_4",
+      "turn": 2
+    },
+    {
+      "action": "modify",
+      "details": {
+        "after": {
+          "sill_height": 0.9
+        },
+        "before": {
+          "sill_height": 0.6
+        }
+      },
+      "target": "win_n0_5",
+      "turn": 2
+    },
+    {
+      "action": "modify",
+      "details": {
+        "after": {
+          "sill_height": 0.9
+        },
+        "before": {
+          "sill_height": 0.6
+        }
+      },
+      "target": "win_n0_6",
+      "turn": 2
+    },
+    {
+      "action": "modify",
+      "details": {
+        "after": {
+          "sill_height": 0.9
+        },
+        "before": {
+          "sill_height": 0.6
+        }
+      },
+      "target": "win_n0_7",
+      "turn": 2
+    },
+    {
+      "action": "modify",
+      "details": {
+        "after": {
+          "sill_height": 0.9
+        },
+        "before": {
+          "sill_height": 0.6
+        }
+      },
+      "target": "win_n0_8",
+      "turn": 2
+    },
+    {
+      "action": "modify",
+      "details": {
+        "after": {
+          "sill_height": 0.9
+        },
+        "before": {
+          "sill_height": 0.6
+        }
+      },
+      "target": "win_n2_1",
+      "turn": 2
+    },
+    {
+      "action": "modify",
+      "details": {
+        "after": {
+          "sill_height": 0.9
+        },
+        "before": {
+          "sill_height": 0.6
+        }
+      },
+      "target": "win_n2_2",
+      "turn": 2
+    },
+    {
+      "action": "modify",
+      "details": {
+        "after": {
+          "sill_height": 0.9
+        },
+        "before": {
+          "sill_height": 0.6
+        }
+      },
+      "target": "win_n2_3",
+      "turn": 2
+    },
+    {
+      "action": "modify",
+      "details": {
+        "after": {
+          "sill_height": 0.9
+        },
+        "before": {
+          "sill_height": 0.6
+        }
+      },
+      "target": "win_n2_4",
+      "turn": 2
+    }
+  ],
+  "counters": {},
+  "edges": [
+    {
+      "_type": "at_level",
+      "dst": "lvl_n0",
+      "key": "at_level",
+      "src": "wall_n0_1"
+    },
+    {
+      "_type": "is_type",
+      "dst": "wt_gen200",
+      "key": "is_type",
+      "src": "wall_n0_1"
+    },
+    {
+      "_type": "hosts",
+      "dst": "win_n0_1",
+      "key": "hosts",
+      "src": "wall_n0_1"
+    },
+    {
+      "_type": "at_level",
+      "dst": "lvl_n0",
+      "key": "at_level",
+      "src": "wall_n0_2"
+    },
+    {
+      "_type": "is_type",
+      "dst": "wt_gen200",
+      "key": "is_type",
+      "src": "wall_n0_2"
+    },
+    {
+      "_type": "hosts",
+      "dst": "win_n0_2",
+      "key": "hosts",
+      "src": "wall_n0_2"
+    },
+    {
+      "_type": "at_level",
+      "dst": "lvl_n0",
+      "key": "at_level",
+      "src": "wall_n0_3"
+    },
+    {
+      "_type": "is_type",
+      "dst": "wt_gen200",
+      "key": "is_type",
+      "src": "wall_n0_3"
+    },
+    {
+      "_type": "hosts",
+      "dst": "win_n0_3",
+      "key": "hosts",
+      "src": "wall_n0_3"
+    },
+    {
+      "_type": "at_level",
+      "dst": "lvl_n0",
+      "key": "at_level",
+      "src": "wall_n0_4"
+    },
+    {
+      "_type": "is_type",
+      "dst": "wt_gen200",
+      "key": "is_type",
+      "src": "wall_n0_4"
+    },
+    {
+      "_type": "hosts",
+      "dst": "win_n0_4",
+      "key": "hosts",
+      "src": "wall_n0_4"
+    },
+    {
+      "_type": "at_level",
+      "dst": "lvl_n0",
+      "key": "at_level",
+      "src": "wall_n0_5"
+    },
+    {
+      "_type": "is_type",
+      "dst": "wt_gen200",
+      "key": "is_type",
+      "src": "wall_n0_5"
+    },
+    {
+      "_type": "hosts",
+      "dst": "win_n0_5",
+      "key": "hosts",
+      "src": "wall_n0_5"
+    },
+    {
+      "_type": "at_level",
+      "dst": "lvl_n0",
+      "key": "at_level",
+      "src": "wall_n0_6"
+    },
+    {
+      "_type": "is_type",
+      "dst": "wt_gen200",
+      "key": "is_type",
+      "src": "wall_n0_6"
+    },
+    {
+      "_type": "hosts",
+      "dst": "win_n0_6",
+      "key": "hosts",
+      "src": "wall_n0_6"
+    },
+    {
+      "_type": "at_level",
+      "dst": "lvl_n0",
+      "key": "at_level",
+      "src": "wall_n0_7"
+    },
+    {
+      "_type": "is_type",
+      "dst": "wt_gen200",
+      "key": "is_type",
+      "src": "wall_n0_7"
+    },
+    {
+      "_type": "hosts",
+      "dst": "win_n0_7",
+      "key": "hosts",
+      "src": "wall_n0_7"
+    },
+    {
+      "_type": "at_level",
+      "dst": "lvl_n0",
+      "key": "at_level",
+      "src": "wall_n0_8"
+    },
+    {
+      "_type": "is_type",
+      "dst": "wt_gen200",
+      "key": "is_type",
+      "src": "wall_n0_8"
+    },
+    {
+      "_type": "hosts",
+      "dst": "win_n0_8",
+      "key": "hosts",
+      "src": "wall_n0_8"
+    },
+    {
+      "_type": "at_level",
+      "dst": "lvl_n0",
+      "key": "at_level",
+      "src": "wall_n0_9"
+    },
+    {
+      "_type": "is_type",
+      "dst": "wt_gen200",
+      "key": "is_type",
+      "src": "wall_n0_9"
+    },
+    {
+      "_type": "at_level",
+      "dst": "lvl_n0",
+      "key": "at_level",
+      "src": "wall_n0_10"
+    },
+    {
+      "_type": "is_type",
+      "dst": "wt_gen200",
+      "key": "is_type",
+      "src": "wall_n0_10"
+    },
+    {
+      "_type": "at_level",
+      "dst": "lvl_n1",
+      "key": "at_level",
+      "src": "wall_n1_1"
+    },
+    {
+      "_type": "is_type",
+      "dst": "wt_gen200",
+      "key": "is_type",
+      "src": "wall_n1_1"
+    },
+    {
+      "_type": "hosts",
+      "dst": "win_n1_1",
+      "key": "hosts",
+      "src": "wall_n1_1"
+    },
+    {
+      "_type": "at_level",
+      "dst": "lvl_n1",
+      "key": "at_level",
+      "src": "wall_n1_2"
+    },
+    {
+      "_type": "is_type",
+      "dst": "wt_gen200",
+      "key": "is_type",
+      "src": "wall_n1_2"
+    },
+    {
+      "_type": "hosts",
+      "dst": "win_n1_2",
+      "key": "hosts",
+      "src": "wall_n1_2"
+    },
+    {
+      "_type": "at_level",
+      "dst": "lvl_n1",
+      "key": "at_level",
+      "src": "wall_n1_3"
+    },
+    {
+      "_type": "is_type",
+      "dst": "wt_gen200",
+      "key": "is_type",
+      "src": "wall_n1_3"
+    },
+    {
+      "_type": "hosts",
+      "dst": "win_n1_3",
+      "key": "hosts",
+      "src": "wall_n1_3"
+    },
+    {
+      "_type": "at_level",
+      "dst": "lvl_n1",
+      "key": "at_level",
+      "src": "wall_n1_4"
+    },
+    {
+      "_type": "is_type",
+      "dst": "wt_gen200",
+      "key": "is_type",
+      "src": "wall_n1_4"
+    },
+    {
+      "_type": "hosts",
+      "dst": "win_n1_4",
+      "key": "hosts",
+      "src": "wall_n1_4"
+    },
+    {
+      "_type": "at_level",
+      "dst": "lvl_n1",
+      "key": "at_level",
+      "src": "wall_n1_5"
+    },
+    {
+      "_type": "is_type",
+      "dst": "wt_gen200",
+      "key": "is_type",
+      "src": "wall_n1_5"
+    },
+    {
+      "_type": "hosts",
+      "dst": "win_n1_5",
+      "key": "hosts",
+      "src": "wall_n1_5"
+    },
+    {
+      "_type": "at_level",
+      "dst": "lvl_n1",
+      "key": "at_level",
+      "src": "wall_n1_6"
+    },
+    {
+      "_type": "is_type",
+      "dst": "wt_gen200",
+      "key": "is_type",
+      "src": "wall_n1_6"
+    },
+    {
+      "_type": "hosts",
+      "dst": "win_n1_6",
+      "key": "hosts",
+      "src": "wall_n1_6"
+    },
+    {
+      "_type": "at_level",
+      "dst": "lvl_n1",
+      "key": "at_level",
+      "src": "wall_n1_7"
+    },
+    {
+      "_type": "is_type",
+      "dst": "wt_gen200",
+      "key": "is_type",
+      "src": "wall_n1_7"
+    },
+    {
+      "_type": "at_level",
+      "dst": "lvl_n1",
+      "key": "at_level",
+      "src": "wall_n1_8"
+    },
+    {
+      "_type": "is_type",
+      "dst": "wt_gen200",
+      "key": "is_type",
+      "src": "wall_n1_8"
+    },
+    {
+      "_type": "at_level",
+      "dst": "lvl_n1",
+      "key": "at_level",
+      "src": "wall_n1_9"
+    },
+    {
+      "_type": "is_type",
+      "dst": "wt_gen200",
+      "key": "is_type",
+      "src": "wall_n1_9"
+    },
+    {
+      "_type": "at_level",
+      "dst": "lvl_n1",
+      "key": "at_level",
+      "src": "wall_n1_10"
+    },
+    {
+      "_type": "is_type",
+      "dst": "wt_gen200",
+      "key": "is_type",
+      "src": "wall_n1_10"
+    },
+    {
+      "_type": "at_level",
+      "dst": "lvl_n2",
+      "key": "at_level",
+      "src": "wall_n2_1"
+    },
+    {
+      "_type": "is_type",
+      "dst": "wt_gen200",
+      "key": "is_type",
+      "src": "wall_n2_1"
+    },
+    {
+      "_type": "hosts",
+      "dst": "win_n2_1",
+      "key": "hosts",
+      "src": "wall_n2_1"
+    },
+    {
+      "_type": "at_level",
+      "dst": "lvl_n2",
+      "key": "at_level",
+      "src": "wall_n2_2"
+    },
+    {
+      "_type": "is_type",
+      "dst": "wt_gen200",
+      "key": "is_type",
+      "src": "wall_n2_2"
+    },
+    {
+      "_type": "hosts",
+      "dst": "win_n2_2",
+      "key": "hosts",
+      "src": "wall_n2_2"
+    },
+    {
+      "_type": "at_level",
+      "dst": "lvl_n2",
+      "key": "at_level",
+      "src": "wall_n2_3"
+    },
+    {
+      "_type": "is_type",
+      "dst": "wt_gen200",
+      "key": "is_type",
+      "src": "wall_n2_3"
+    },
+    {
+      "_type": "hosts",
+      "dst": "win_n2_3",
+      "key": "hosts",
+      "src": "wall_n2_3"
+    },
+    {
+      "_type": "at_level",
+      "dst": "lvl_n2",
+      "key": "at_level",
+      "src": "wall_n2_4"
+    },
+    {
+      "_type": "is_type",
+      "dst": "wt_gen200",
+      "key": "is_type",
+      "src": "wall_n2_4"
+    },
+    {
+      "_type": "hosts",
+      "dst": "win_n2_4",
+      "key": "hosts",
+      "src": "wall_n2_4"
+    },
+    {
+      "_type": "at_level",
+      "dst": "lvl_n2",
+      "key": "at_level",
+      "src": "wall_n2_5"
+    },
+    {
+      "_type": "is_type",
+      "dst": "wt_gen200",
+      "key": "is_type",
+      "src": "wall_n2_5"
+    },
+    {
+      "_type": "at_level",
+      "dst": "lvl_n2",
+      "key": "at_level",
+      "src": "wall_n2_6"
+    },
+    {
+      "_type": "is_type",
+      "dst": "wt_gen200",
+      "key": "is_type",
+      "src": "wall_n2_6"
+    },
+    {
+      "_type": "at_level",
+      "dst": "lvl_n2",
+      "key": "at_level",
+      "src": "wall_n2_7"
+    },
+    {
+      "_type": "is_type",
+      "dst": "wt_gen200",
+      "key": "is_type",
+      "src": "wall_n2_7"
+    },
+    {
+      "_type": "at_level",
+      "dst": "lvl_n2",
+      "key": "at_level",
+      "src": "wall_n2_8"
+    },
+    {
+      "_type": "is_type",
+      "dst": "wt_gen200",
+      "key": "is_type",
+      "src": "wall_n2_8"
+    },
+    {
+      "_type": "at_level",
+      "dst": "lvl_n2",
+      "key": "at_level",
+      "src": "wall_n2_9"
+    },
+    {
+      "_type": "is_type",
+      "dst": "wt_gen200",
+      "key": "is_type",
+      "src": "wall_n2_9"
+    },
+    {
+      "_type": "at_level",
+      "dst": "lvl_n2",
+      "key": "at_level",
+      "src": "wall_n2_10"
+    },
+    {
+      "_type": "is_type",
+      "dst": "wt_gen200",
+      "key": "is_type",
+      "src": "wall_n2_10"
+    }
+  ],
+  "nodes": [
+    {
+      "_type": "Level",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "elevation": 0,
+      "id": "lvl_n0",
+      "modified_at_turn": [],
+      "name": "N0"
+    },
+    {
+      "_type": "Level",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "elevation": 3,
+      "id": "lvl_n1",
+      "modified_at_turn": [],
+      "name": "N1"
+    },
+    {
+      "_type": "Level",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "elevation": 6,
+      "id": "lvl_n2",
+      "modified_at_turn": [],
+      "name": "N2"
+    },
+    {
+      "_type": "WallType",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "id": "wt_gen200",
+      "modified_at_turn": [],
+      "name": "GEN_200",
+      "total_thickness": 0.2
+    },
+    {
+      "_type": "Wall",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "height": 2.7,
+      "id": "wall_n0_1",
+      "length": 4,
+      "level_ref": "lvl_n0",
+      "modified_at_turn": [],
+      "p1": [
+        0,
+        0,
+        0
+      ],
+      "p2": [
+        4,
+        0,
+        0
+      ],
+      "type_ref": "wt_gen200"
+    },
+    {
+      "_type": "Wall",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "height": 2.7,
+      "id": "wall_n0_2",
+      "length": 4,
+      "level_ref": "lvl_n0",
+      "modified_at_turn": [],
+      "p1": [
+        4,
+        0,
+        0
+      ],
+      "p2": [
+        8,
+        0,
+        0
+      ],
+      "type_ref": "wt_gen200"
+    },
+    {
+      "_type": "Wall",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "height": 2.7,
+      "id": "wall_n0_3",
+      "length": 4,
+      "level_ref": "lvl_n0",
+      "modified_at_turn": [],
+      "p1": [
+        8,
+        0,
+        0
+      ],
+      "p2": [
+        12,
+        0,
+        0
+      ],
+      "type_ref": "wt_gen200"
+    },
+    {
+      "_type": "Wall",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "height": 2.7,
+      "id": "wall_n0_4",
+      "length": 4,
+      "level_ref": "lvl_n0",
+      "modified_at_turn": [],
+      "p1": [
+        12,
+        0,
+        0
+      ],
+      "p2": [
+        16,
+        0,
+        0
+      ],
+      "type_ref": "wt_gen200"
+    },
+    {
+      "_type": "Wall",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "height": 2.7,
+      "id": "wall_n0_5",
+      "length": 4,
+      "level_ref": "lvl_n0",
+      "modified_at_turn": [],
+      "p1": [
+        16,
+        0,
+        0
+      ],
+      "p2": [
+        20,
+        0,
+        0
+      ],
+      "type_ref": "wt_gen200"
+    },
+    {
+      "_type": "Wall",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "height": 2.7,
+      "id": "wall_n0_6",
+      "length": 4,
+      "level_ref": "lvl_n0",
+      "modified_at_turn": [],
+      "p1": [
+        20,
+        0,
+        0
+      ],
+      "p2": [
+        24,
+        0,
+        0
+      ],
+      "type_ref": "wt_gen200"
+    },
+    {
+      "_type": "Wall",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "height": 2.7,
+      "id": "wall_n0_7",
+      "length": 4,
+      "level_ref": "lvl_n0",
+      "modified_at_turn": [],
+      "p1": [
+        24,
+        0,
+        0
+      ],
+      "p2": [
+        28,
+        0,
+        0
+      ],
+      "type_ref": "wt_gen200"
+    },
+    {
+      "_type": "Wall",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "height": 2.7,
+      "id": "wall_n0_8",
+      "length": 4,
+      "level_ref": "lvl_n0",
+      "modified_at_turn": [],
+      "p1": [
+        28,
+        0,
+        0
+      ],
+      "p2": [
+        32,
+        0,
+        0
+      ],
+      "type_ref": "wt_gen200"
+    },
+    {
+      "_type": "Wall",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "height": 2.7,
+      "id": "wall_n0_9",
+      "length": 4,
+      "level_ref": "lvl_n0",
+      "modified_at_turn": [],
+      "p1": [
+        32,
+        0,
+        0
+      ],
+      "p2": [
+        36,
+        0,
+        0
+      ],
+      "type_ref": "wt_gen200"
+    },
+    {
+      "_type": "Wall",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "height": 2.7,
+      "id": "wall_n0_10",
+      "length": 4,
+      "level_ref": "lvl_n0",
+      "modified_at_turn": [],
+      "p1": [
+        36,
+        0,
+        0
+      ],
+      "p2": [
+        40,
+        0,
+        0
+      ],
+      "type_ref": "wt_gen200"
+    },
+    {
+      "_type": "Wall",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "height": 2.7,
+      "id": "wall_n1_1",
+      "length": 4,
+      "level_ref": "lvl_n1",
+      "modified_at_turn": [],
+      "p1": [
+        0,
+        0,
+        3
+      ],
+      "p2": [
+        4,
+        0,
+        3
+      ],
+      "type_ref": "wt_gen200"
+    },
+    {
+      "_type": "Wall",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "height": 2.7,
+      "id": "wall_n1_2",
+      "length": 4,
+      "level_ref": "lvl_n1",
+      "modified_at_turn": [],
+      "p1": [
+        4,
+        0,
+        3
+      ],
+      "p2": [
+        8,
+        0,
+        3
+      ],
+      "type_ref": "wt_gen200"
+    },
+    {
+      "_type": "Wall",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "height": 2.7,
+      "id": "wall_n1_3",
+      "length": 4,
+      "level_ref": "lvl_n1",
+      "modified_at_turn": [],
+      "p1": [
+        8,
+        0,
+        3
+      ],
+      "p2": [
+        12,
+        0,
+        3
+      ],
+      "type_ref": "wt_gen200"
+    },
+    {
+      "_type": "Wall",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "height": 2.7,
+      "id": "wall_n1_4",
+      "length": 4,
+      "level_ref": "lvl_n1",
+      "modified_at_turn": [],
+      "p1": [
+        12,
+        0,
+        3
+      ],
+      "p2": [
+        16,
+        0,
+        3
+      ],
+      "type_ref": "wt_gen200"
+    },
+    {
+      "_type": "Wall",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "height": 2.7,
+      "id": "wall_n1_5",
+      "length": 4,
+      "level_ref": "lvl_n1",
+      "modified_at_turn": [],
+      "p1": [
+        16,
+        0,
+        3
+      ],
+      "p2": [
+        20,
+        0,
+        3
+      ],
+      "type_ref": "wt_gen200"
+    },
+    {
+      "_type": "Wall",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "height": 2.7,
+      "id": "wall_n1_6",
+      "length": 4,
+      "level_ref": "lvl_n1",
+      "modified_at_turn": [],
+      "p1": [
+        20,
+        0,
+        3
+      ],
+      "p2": [
+        24,
+        0,
+        3
+      ],
+      "type_ref": "wt_gen200"
+    },
+    {
+      "_type": "Wall",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "height": 2.7,
+      "id": "wall_n1_7",
+      "length": 4,
+      "level_ref": "lvl_n1",
+      "modified_at_turn": [],
+      "p1": [
+        24,
+        0,
+        3
+      ],
+      "p2": [
+        28,
+        0,
+        3
+      ],
+      "type_ref": "wt_gen200"
+    },
+    {
+      "_type": "Wall",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "height": 2.7,
+      "id": "wall_n1_8",
+      "length": 4,
+      "level_ref": "lvl_n1",
+      "modified_at_turn": [],
+      "p1": [
+        28,
+        0,
+        3
+      ],
+      "p2": [
+        32,
+        0,
+        3
+      ],
+      "type_ref": "wt_gen200"
+    },
+    {
+      "_type": "Wall",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "height": 2.7,
+      "id": "wall_n1_9",
+      "length": 4,
+      "level_ref": "lvl_n1",
+      "modified_at_turn": [],
+      "p1": [
+        32,
+        0,
+        3
+      ],
+      "p2": [
+        36,
+        0,
+        3
+      ],
+      "type_ref": "wt_gen200"
+    },
+    {
+      "_type": "Wall",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "height": 2.7,
+      "id": "wall_n1_10",
+      "length": 4,
+      "level_ref": "lvl_n1",
+      "modified_at_turn": [],
+      "p1": [
+        36,
+        0,
+        3
+      ],
+      "p2": [
+        40,
+        0,
+        3
+      ],
+      "type_ref": "wt_gen200"
+    },
+    {
+      "_type": "Wall",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "height": 2.7,
+      "id": "wall_n2_1",
+      "length": 4,
+      "level_ref": "lvl_n2",
+      "modified_at_turn": [],
+      "p1": [
+        0,
+        0,
+        6
+      ],
+      "p2": [
+        4,
+        0,
+        6
+      ],
+      "type_ref": "wt_gen200"
+    },
+    {
+      "_type": "Wall",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "height": 2.7,
+      "id": "wall_n2_2",
+      "length": 4,
+      "level_ref": "lvl_n2",
+      "modified_at_turn": [],
+      "p1": [
+        4,
+        0,
+        6
+      ],
+      "p2": [
+        8,
+        0,
+        6
+      ],
+      "type_ref": "wt_gen200"
+    },
+    {
+      "_type": "Wall",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "height": 2.7,
+      "id": "wall_n2_3",
+      "length": 4,
+      "level_ref": "lvl_n2",
+      "modified_at_turn": [],
+      "p1": [
+        8,
+        0,
+        6
+      ],
+      "p2": [
+        12,
+        0,
+        6
+      ],
+      "type_ref": "wt_gen200"
+    },
+    {
+      "_type": "Wall",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "height": 2.7,
+      "id": "wall_n2_4",
+      "length": 4,
+      "level_ref": "lvl_n2",
+      "modified_at_turn": [],
+      "p1": [
+        12,
+        0,
+        6
+      ],
+      "p2": [
+        16,
+        0,
+        6
+      ],
+      "type_ref": "wt_gen200"
+    },
+    {
+      "_type": "Wall",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "height": 2.7,
+      "id": "wall_n2_5",
+      "length": 4,
+      "level_ref": "lvl_n2",
+      "modified_at_turn": [],
+      "p1": [
+        16,
+        0,
+        6
+      ],
+      "p2": [
+        20,
+        0,
+        6
+      ],
+      "type_ref": "wt_gen200"
+    },
+    {
+      "_type": "Wall",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "height": 2.7,
+      "id": "wall_n2_6",
+      "length": 4,
+      "level_ref": "lvl_n2",
+      "modified_at_turn": [],
+      "p1": [
+        20,
+        0,
+        6
+      ],
+      "p2": [
+        24,
+        0,
+        6
+      ],
+      "type_ref": "wt_gen200"
+    },
+    {
+      "_type": "Wall",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "height": 2.7,
+      "id": "wall_n2_7",
+      "length": 4,
+      "level_ref": "lvl_n2",
+      "modified_at_turn": [],
+      "p1": [
+        24,
+        0,
+        6
+      ],
+      "p2": [
+        28,
+        0,
+        6
+      ],
+      "type_ref": "wt_gen200"
+    },
+    {
+      "_type": "Wall",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "height": 2.7,
+      "id": "wall_n2_8",
+      "length": 4,
+      "level_ref": "lvl_n2",
+      "modified_at_turn": [],
+      "p1": [
+        28,
+        0,
+        6
+      ],
+      "p2": [
+        32,
+        0,
+        6
+      ],
+      "type_ref": "wt_gen200"
+    },
+    {
+      "_type": "Wall",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "height": 2.7,
+      "id": "wall_n2_9",
+      "length": 4,
+      "level_ref": "lvl_n2",
+      "modified_at_turn": [],
+      "p1": [
+        32,
+        0,
+        6
+      ],
+      "p2": [
+        36,
+        0,
+        6
+      ],
+      "type_ref": "wt_gen200"
+    },
+    {
+      "_type": "Wall",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "height": 2.7,
+      "id": "wall_n2_10",
+      "length": 4,
+      "level_ref": "lvl_n2",
+      "modified_at_turn": [],
+      "p1": [
+        36,
+        0,
+        6
+      ],
+      "p2": [
+        40,
+        0,
+        6
+      ],
+      "type_ref": "wt_gen200"
+    },
+    {
+      "_type": "Window",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "head_height": 2.1,
+      "host_wall_ref": "wall_n0_1",
+      "id": "win_n0_1",
+      "modified_at_turn": [
+        2
+      ],
+      "position": [
+        2,
+        0,
+        0
+      ],
+      "sill_height": 0.9,
+      "type_ref": "WIN_GEN"
+    },
+    {
+      "_type": "Window",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "head_height": 2.1,
+      "host_wall_ref": "wall_n0_2",
+      "id": "win_n0_2",
+      "modified_at_turn": [
+        2
+      ],
+      "position": [
+        6,
+        0,
+        0
+      ],
+      "sill_height": 0.9,
+      "type_ref": "WIN_GEN"
+    },
+    {
+      "_type": "Window",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "head_height": 2.1,
+      "host_wall_ref": "wall_n0_3",
+      "id": "win_n0_3",
+      "modified_at_turn": [
+        2
+      ],
+      "position": [
+        10,
+        0,
+        0
+      ],
+      "sill_height": 0.9,
+      "type_ref": "WIN_GEN"
+    },
+    {
+      "_type": "Window",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "head_height": 2.1,
+      "host_wall_ref": "wall_n0_4",
+      "id": "win_n0_4",
+      "modified_at_turn": [
+        2
+      ],
+      "position": [
+        14,
+        0,
+        0
+      ],
+      "sill_height": 0.9,
+      "type_ref": "WIN_GEN"
+    },
+    {
+      "_type": "Window",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "head_height": 2.1,
+      "host_wall_ref": "wall_n0_5",
+      "id": "win_n0_5",
+      "modified_at_turn": [
+        2
+      ],
+      "position": [
+        18,
+        0,
+        0
+      ],
+      "sill_height": 0.9,
+      "type_ref": "WIN_GEN"
+    },
+    {
+      "_type": "Window",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "head_height": 2.1,
+      "host_wall_ref": "wall_n0_6",
+      "id": "win_n0_6",
+      "modified_at_turn": [
+        2
+      ],
+      "position": [
+        22,
+        0,
+        0
+      ],
+      "sill_height": 0.9,
+      "type_ref": "WIN_GEN"
+    },
+    {
+      "_type": "Window",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "head_height": 2.1,
+      "host_wall_ref": "wall_n0_7",
+      "id": "win_n0_7",
+      "modified_at_turn": [
+        2
+      ],
+      "position": [
+        26,
+        0,
+        0
+      ],
+      "sill_height": 0.9,
+      "type_ref": "WIN_GEN"
+    },
+    {
+      "_type": "Window",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "head_height": 2.1,
+      "host_wall_ref": "wall_n0_8",
+      "id": "win_n0_8",
+      "modified_at_turn": [
+        2
+      ],
+      "position": [
+        30,
+        0,
+        0
+      ],
+      "sill_height": 0.9,
+      "type_ref": "WIN_GEN"
+    },
+    {
+      "_type": "Window",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "head_height": 2.1,
+      "host_wall_ref": "wall_n1_1",
+      "id": "win_n1_1",
+      "modified_at_turn": [],
+      "position": [
+        2,
+        0,
+        3
+      ],
+      "sill_height": 0.9,
+      "type_ref": "WIN_GEN"
+    },
+    {
+      "_type": "Window",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "head_height": 2.1,
+      "host_wall_ref": "wall_n1_2",
+      "id": "win_n1_2",
+      "modified_at_turn": [],
+      "position": [
+        6,
+        0,
+        3
+      ],
+      "sill_height": 0.9,
+      "type_ref": "WIN_GEN"
+    },
+    {
+      "_type": "Window",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "head_height": 2.1,
+      "host_wall_ref": "wall_n1_3",
+      "id": "win_n1_3",
+      "modified_at_turn": [],
+      "position": [
+        10,
+        0,
+        3
+      ],
+      "sill_height": 0.9,
+      "type_ref": "WIN_GEN"
+    },
+    {
+      "_type": "Window",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "head_height": 2.1,
+      "host_wall_ref": "wall_n1_4",
+      "id": "win_n1_4",
+      "modified_at_turn": [],
+      "position": [
+        14,
+        0,
+        3
+      ],
+      "sill_height": 0.9,
+      "type_ref": "WIN_GEN"
+    },
+    {
+      "_type": "Window",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "head_height": 2.1,
+      "host_wall_ref": "wall_n1_5",
+      "id": "win_n1_5",
+      "modified_at_turn": [],
+      "position": [
+        18,
+        0,
+        3
+      ],
+      "sill_height": 0.9,
+      "type_ref": "WIN_GEN"
+    },
+    {
+      "_type": "Window",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "head_height": 2.1,
+      "host_wall_ref": "wall_n1_6",
+      "id": "win_n1_6",
+      "modified_at_turn": [],
+      "position": [
+        22,
+        0,
+        3
+      ],
+      "sill_height": 0.9,
+      "type_ref": "WIN_GEN"
+    },
+    {
+      "_type": "Window",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "head_height": 2.1,
+      "host_wall_ref": "wall_n2_1",
+      "id": "win_n2_1",
+      "modified_at_turn": [
+        2
+      ],
+      "position": [
+        2,
+        0,
+        6
+      ],
+      "sill_height": 0.9,
+      "type_ref": "WIN_GEN"
+    },
+    {
+      "_type": "Window",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "head_height": 2.1,
+      "host_wall_ref": "wall_n2_2",
+      "id": "win_n2_2",
+      "modified_at_turn": [
+        2
+      ],
+      "position": [
+        6,
+        0,
+        6
+      ],
+      "sill_height": 0.9,
+      "type_ref": "WIN_GEN"
+    },
+    {
+      "_type": "Window",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "head_height": 2.1,
+      "host_wall_ref": "wall_n2_3",
+      "id": "win_n2_3",
+      "modified_at_turn": [
+        2
+      ],
+      "position": [
+        10,
+        0,
+        6
+      ],
+      "sill_height": 0.9,
+      "type_ref": "WIN_GEN"
+    },
+    {
+      "_type": "Window",
+      "created_at_turn": 1,
+      "deleted_at_turn": null,
+      "head_height": 2.1,
+      "host_wall_ref": "wall_n2_4",
+      "id": "win_n2_4",
+      "modified_at_turn": [
+        2
+      ],
+      "position": [
+        14,
+        0,
+        6
+      ],
+      "sill_height": 0.9,
+      "type_ref": "WIN_GEN"
+    }
+  ],
+  "project_id": "Tower",
+  "turn": 2
+}

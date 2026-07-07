@@ -206,7 +206,7 @@ namespace RevitMCPCommandSet.Services
                     failureOptions.SetDelayedMiniWarnings(false);
                     tran.SetFailureHandlingOptions(failureOptions);
 
-                    tran.StartWithSwallowedWarnings();
+                    tran.Start();
 
                     // Find the room tag type
                     FamilySymbol roomTagType = FindRoomTagType(_doc);

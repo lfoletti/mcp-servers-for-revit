@@ -158,7 +158,7 @@ namespace RevitMCPCommandSet.Services
                 // Apply colors to elements
                 using (Transaction transaction = new Transaction(doc, "Color Splash"))
                 {
-                    transaction.StartWithSwallowedWarnings();
+                    transaction.Start();
 
                     // Get solid fill pattern
                     ElementId solidFillPatternId = GetSolidFillPatternId();

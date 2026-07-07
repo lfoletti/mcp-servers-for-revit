@@ -24,6 +24,11 @@ namespace RevitMCPKgCommandSet.Core
             ["Wall"] = new NodeTypeSpec(new[] { "type_ref", "level_ref", "p1", "p2", "length", "height" }),
             ["Door"] = new NodeTypeSpec(new[] { "type_ref", "host_wall_ref", "position", "sill_height", "head_height" }),
             ["Window"] = new NodeTypeSpec(new[] { "type_ref", "host_wall_ref", "position", "sill_height", "head_height" }),
+            // In-place / loadable family instances categorised as Murs
+            // (OST_Walls) but not of class Wall: façade decoration
+            // (cladding, brass profiles, cannelure, corner pieces, glazing
+            // inserts). Projected so they stop reading as "missing" walls.
+            ["FacadeElement"] = new NodeTypeSpec(new[] { "family_name", "type_name", "position", "level_ref" }),
             ["Room"] = new NodeTypeSpec(
                 new[] { "name", "level_ref" },
                 new[] { "area", "boundary_walls", "use_subcategory" }),

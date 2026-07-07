@@ -211,7 +211,8 @@ namespace RevitMCPKgCommandSet.Services
                 .Cast<FamilyInstance>()
                 .Where(fi => fi.Category != null &&
                              (fi.Category.Id.Value == (long)BuiltInCategory.OST_Windows ||
-                              fi.Category.Id.Value == (long)BuiltInCategory.OST_Doors))
+                              fi.Category.Id.Value == (long)BuiltInCategory.OST_Doors ||
+                              fi.Category.Id.Value == (long)BuiltInCategory.OST_Walls))
                 .Select(fi => fi.Id.Value)
                 .ToList();
             Projection.ApplyAdded(kg, reader, ids);
