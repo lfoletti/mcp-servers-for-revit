@@ -26,6 +26,20 @@ namespace revit_mcp_plugin.Core
         private ILogger _logger;
         private CommandExecutor _commandExecutor;
 
+        // 自动关闭守卫：服务本身即 RCE 面，只在被使用时保持开启。
+        // Auto-off guards: the socket is an RCE surface; keep it open only while in use.
+        private System.Threading.Timer _idleTimer;
+        private System.Threading.Timer _absoluteTimer;
+        private int _idleTimeoutMs;
+        private int _maxUptimeMs;
+
+        /// <summary>Raised (on a background thread) whenever the running state changes.</summary>
+        public event EventHandler RunningStateChanged;
+
+        /// <summary>Raised (on a background thread) when the service shuts itself down after
+        /// the inactivity / absolute-uptime guard fires — not on a manual stop.</summary>
+        public event EventHandler AutoStopped;
+
         public static SocketService Instance
         {
             get
@@ -109,7 +123,10 @@ namespace revit_mcp_plugin.Core
                 {
                     IsBackground = true
                 };
-                _listenerThread.Start();              
+                _listenerThread.Start();
+
+                StartAutoOffGuards();
+                RunningStateChanged?.Invoke(this, EventArgs.Empty);
             }
             catch (Exception)
             {
@@ -117,13 +134,20 @@ namespace revit_mcp_plugin.Core
             }
         }
 
-        public void Stop()
+        public void Stop() => Stop(auto: false);
+
+        private void Stop(bool auto)
         {
             if (!_isRunning) return;
 
             try
             {
                 _isRunning = false;
+
+                _idleTimer?.Dispose();
+                _idleTimer = null;
+                _absoluteTimer?.Dispose();
+                _absoluteTimer = null;
 
                 _listener?.Stop();
                 _listener = null;
@@ -137,6 +161,71 @@ namespace revit_mcp_plugin.Core
             {
                 // log error
             }
+            finally
+            {
+                RunningStateChanged?.Invoke(this, EventArgs.Empty);
+                if (auto)
+                {
+                    AutoStopped?.Invoke(this, EventArgs.Empty);
+                }
+            }
+        }
+
+        // 启动自动关闭守卫：空闲超时（每收到一条命令重新计时）+ 可选绝对上限。
+        // Start the auto-off guards: an inactivity timeout (re-armed on every received
+        // command) plus an optional absolute cap. Both are configurable via env vars so
+        // the exposure window can be tuned without a rebuild.
+        private void StartAutoOffGuards()
+        {
+            // 空闲超时，默认 15 分钟；<=0 关闭。
+            // Inactivity timeout, default 15 min; <=0 disables it.
+            _idleTimeoutMs = ReadTimeoutMinutes("REVIT_MCP_IDLE_TIMEOUT_MIN", 15) * 60_000;
+            // 绝对上限（无论是否活跃），默认 0 = 关闭。
+            // Absolute cap regardless of activity, default 0 = disabled.
+            _maxUptimeMs = ReadTimeoutMinutes("REVIT_MCP_MAX_UPTIME_MIN", 0) * 60_000;
+
+            if (_idleTimeoutMs > 0)
+            {
+                _idleTimer = new System.Threading.Timer(
+                    _ => AutoStop("inactivity"), null, _idleTimeoutMs, Timeout.Infinite);
+                _logger?.Info($"MCP auto-off: idle timeout {_idleTimeoutMs / 60000} min.");
+            }
+            if (_maxUptimeMs > 0)
+            {
+                _absoluteTimer = new System.Threading.Timer(
+                    _ => AutoStop("max-uptime"), null, _maxUptimeMs, Timeout.Infinite);
+                _logger?.Info($"MCP auto-off: absolute cap {_maxUptimeMs / 60000} min.");
+            }
+        }
+
+        private static int ReadTimeoutMinutes(string envName, int defaultMinutes)
+        {
+            var raw = Environment.GetEnvironmentVariable(envName);
+            if (!string.IsNullOrWhiteSpace(raw) && int.TryParse(raw, out int minutes))
+            {
+                return minutes;
+            }
+            return defaultMinutes;
+        }
+
+        // 收到一条完整命令后重新计时空闲守卫。
+        // Re-arm the inactivity guard after a complete command is received.
+        private void ArmIdleTimer()
+        {
+            if (_idleTimeoutMs > 0)
+            {
+                try { _idleTimer?.Change(_idleTimeoutMs, Timeout.Infinite); }
+                catch (ObjectDisposedException) { /* stopped concurrently */ }
+            }
+        }
+
+        // 守卫到期：在线程池线程上自行关闭服务（Stop 会通知 UI 更新图标）。
+        // Guard elapsed: shut the service down from the timer thread (Stop notifies the UI).
+        private void AutoStop(string reason)
+        {
+            if (!_isRunning) return;
+            _logger?.Info($"MCP socket service auto-stopping ({reason}).");
+            Stop(auto: true);
         }
 
         private void ListenForClients()
@@ -265,6 +354,10 @@ namespace revit_mcp_plugin.Core
 
                         System.Diagnostics.Trace.WriteLine(
                             $"收到消息: {message}\nReceived message: {message}");
+
+                        // 有活动 ⇒ 重新计时空闲自动关闭。
+                        // Activity seen => re-arm the inactivity auto-off.
+                        ArmIdleTimer();
 
                         string response = ProcessJsonRPCRequest(message);
 

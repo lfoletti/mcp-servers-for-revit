@@ -1,5 +1,6 @@
 using System.IO;
 using System.Reflection;
+using System.Text;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using Microsoft.CodeAnalysis;
@@ -51,16 +52,35 @@ namespace RevitMCPCommandSet.Commands.ExecuteDynamicCode
         {
             try
             {
-                var doc = app.ActiveUIDocument.Document;
+                // 暴露完整的 API 入口（uiapp / uidoc / doc / app），而不只是 Document。
+                // Expose the full API surface (uiapp / uidoc / doc / app), not just Document.
+                var uiapp = app;
+                var uidoc = app.ActiveUIDocument;
+                var doc = uidoc?.Document;
+                var appServices = app.Application;
+
                 ResultInfo = new ExecutionResultInfo();
+
+                // Print(...) 累积文本输出，随返回值一并回传给调用方。
+                // Print(...) accumulates text output, returned to the caller alongside the value.
+                var output = new StringBuilder();
+                Action<object> print = value =>
+                {
+                    output.Append(value);
+                    output.Append('\n');
+                };
 
                 object result;
                 if (_transactionMode == TransactionModeNone)
                 {
                     result = CompileAndExecuteCode(
                         code: _generatedCode,
+                        uiapp: uiapp,
+                        uidoc: uidoc,
                         doc: doc,
-                        parameters: _executionParameters
+                        app: appServices,
+                        parameters: _executionParameters,
+                        print: print
                     );
                 }
                 else
@@ -71,8 +91,12 @@ namespace RevitMCPCommandSet.Commands.ExecuteDynamicCode
 
                         result = CompileAndExecuteCode(
                             code: _generatedCode,
+                            uiapp: uiapp,
+                            uidoc: uidoc,
                             doc: doc,
-                            parameters: _executionParameters
+                            app: appServices,
+                            parameters: _executionParameters,
+                            print: print
                         );
 
                         transaction.Commit();
@@ -80,12 +104,13 @@ namespace RevitMCPCommandSet.Commands.ExecuteDynamicCode
                 }
 
                 ResultInfo.Success = true;
+                ResultInfo.Output = output.ToString();
                 ResultInfo.Result = JsonConvert.SerializeObject(result);
             }
             catch (Exception ex)
             {
                 ResultInfo.Success = false;
-                ResultInfo.ErrorMessage = $"执行失败: {ex.Message}";
+                ResultInfo.ErrorMessage = $"执行失败: {ex.Message}\n{ex.StackTrace}";
             }
             finally
             {
@@ -94,12 +119,24 @@ namespace RevitMCPCommandSet.Commands.ExecuteDynamicCode
             }
         }
 
-        private object CompileAndExecuteCode(string code, Document doc, object[] parameters)
+        private object CompileAndExecuteCode(
+            string code,
+            UIApplication uiapp,
+            UIDocument uidoc,
+            Document doc,
+            Autodesk.Revit.ApplicationServices.Application app,
+            object[] parameters,
+            Action<object> print)
         {
-            // 包装代码以规范入口点
+            // 包装代码以规范入口点。用户代码可直接使用 uiapp / uidoc / document /
+            // app / parameters / Print(...)（保留 document、parameters 旧命名以向后兼容）。
+            // Wrap the code around a normalized entry point. User code can use uiapp /
+            // uidoc / document / app / parameters / Print(...) directly (the document and
+            // parameters names are kept for backward compatibility with older snippets).
             var wrappedCode = $@"
 using System;
 using System.Linq;
+using System.Text;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
 using System.Collections.Generic;
@@ -108,7 +145,13 @@ namespace AIGeneratedCode
 {{
     public static class CodeExecutor
     {{
-        public static object Execute(Document document, object[] parameters)
+        public static object Execute(
+            UIApplication uiapp,
+            UIDocument uidoc,
+            Document document,
+            Autodesk.Revit.ApplicationServices.Application app,
+            object[] parameters,
+            Action<object> Print)
         {{
             // 用户代码入口
             {code}
@@ -152,7 +195,7 @@ namespace AIGeneratedCode
                 var executorType = assembly.GetType("AIGeneratedCode.CodeExecutor");
                 var executeMethod = executorType.GetMethod("Execute");
 
-                return executeMethod.Invoke(null, new object[] { doc, parameters });
+                return executeMethod.Invoke(null, new object[] { uiapp, uidoc, doc, app, parameters, print });
             }
         }
 
@@ -170,6 +213,9 @@ namespace AIGeneratedCode
 
         [JsonProperty("result")]
         public string Result { get; set; }
+
+        [JsonProperty("output")]
+        public string Output { get; set; } = string.Empty;
 
         [JsonProperty("errorMessage")]
         public string ErrorMessage { get; set; } = string.Empty;

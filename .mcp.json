@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "revit": {
-      "command": "node",
-      "args": ["server/build/index.js"],
+      "command": "C:\\Users\\lauro\\AppData\\Local\\anaconda3\\envs\\revitmcp\\node.exe",
+      "args": ["C:\\Users\\lauro\\Documents\\IT\\poc-baseline\\server\\build\\index.js"],
       "env": {
         "KG_V2_TOOLS": "on"
       }
