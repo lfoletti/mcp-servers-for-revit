@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using Autodesk.Revit.UI;
 using RevitMCPKgCommandSet.Core;
@@ -21,13 +22,14 @@ namespace RevitMCPKgCommandSet.Services
         public string AggField { get; private set; }
         public string AggGroupBy { get; private set; }
         public List<JoinStep> Join { get; private set; }
+        public bool IncludeEdges { get; private set; }
 
         public AIResult<KgQueryResult> Result { get; private set; }
 
         public void SetParameters(
             string nodeType, Dictionary<string, object> attrsFilter, bool includeSoftDeleted,
             HashSet<string> select = null, string aggOp = null, string aggField = null, string aggGroupBy = null,
-            List<JoinStep> join = null)
+            List<JoinStep> join = null, bool includeEdges = false)
         {
             NodeType = nodeType;
             AttrsFilter = attrsFilter;
@@ -37,6 +39,7 @@ namespace RevitMCPKgCommandSet.Services
             AggField = aggField;
             AggGroupBy = aggGroupBy;
             Join = join;
+            IncludeEdges = includeEdges;
             _resetEvent.Reset();
         }
 
@@ -62,8 +65,30 @@ namespace RevitMCPKgCommandSet.Services
                 }
                 else
                 {
-                    var views = NodeViewBuilder.FromMany(nodes, Select);
+                    var nodeList = nodes as IList<Node> ?? nodes.ToList();
+                    var views = NodeViewBuilder.FromMany(nodeList, Select);
                     response = new KgQueryResult { Count = views.Count, Nodes = views };
+
+                    if (IncludeEdges)
+                    {
+                        // Induced subgraph: only edges with both endpoints in
+                        // the matched set, so the result stands alone.
+                        var idset = new HashSet<string>(nodeList.Select(n => n.LlmId));
+                        var edgeViews = new List<KgEdgeView>();
+                        foreach (var e in kg.Edges)
+                        {
+                            if (!idset.Contains(e.Src) || !idset.Contains(e.Dst)) continue;
+                            edgeViews.Add(new KgEdgeView
+                            {
+                                Src = e.Src,
+                                Dst = e.Dst,
+                                EdgeType = e.EdgeType,
+                                Attrs = (e.Attrs != null && e.Attrs.Count > 0) ? e.Attrs : null,
+                            });
+                        }
+                        response.Edges = edgeViews;
+                        response.EdgesCount = edgeViews.Count;
+                    }
                 }
 
                 Result = new AIResult<KgQueryResult>

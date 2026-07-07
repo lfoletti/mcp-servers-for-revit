@@ -23,6 +23,16 @@ namespace RevitMCPKgCommandSet.Models
         // neighbours' projected attrs — a relational audit in one call.
         [JsonProperty("rows", NullValueHandling = NullValueHandling.Ignore)]
         public List<Dictionary<string, object>> Rows { get; set; }
+
+        // Present only when params carried include_edges=true (node-list path).
+        // The induced subgraph over the matched nodes: every edge whose src and
+        // dst are both in `nodes`, so the payload is self-contained (no dangling
+        // endpoints). On an unfiltered query this is the full edge set.
+        [JsonProperty("edges_count", NullValueHandling = NullValueHandling.Ignore)]
+        public int? EdgesCount { get; set; }
+
+        [JsonProperty("edges", NullValueHandling = NullValueHandling.Ignore)]
+        public List<KgEdgeView> Edges { get; set; }
     }
 
     public class KgAggregateResult

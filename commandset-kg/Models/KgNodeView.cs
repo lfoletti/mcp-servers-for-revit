@@ -19,5 +19,10 @@ namespace RevitMCPKgCommandSet.Models
         [JsonProperty("src")] public string Src { get; set; }
         [JsonProperty("dst")] public string Dst { get; set; }
         [JsonProperty("edge_type")] public string EdgeType { get; set; }
+
+        // Only F2 (annotation) edges usually carry attrs; omitted when empty
+        // so F1 (Revit-derived) edges stay compact.
+        [JsonProperty("attrs", NullValueHandling = NullValueHandling.Ignore)]
+        public Dictionary<string, object> Attrs { get; set; }
     }
 }

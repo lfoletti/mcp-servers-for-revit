@@ -26,6 +26,7 @@ namespace RevitMCPKgCommandSet.Commands
             {
                 string nodeType = parameters?["node_type"]?.ToString();
                 bool includeSoftDeleted = parameters?["include_soft_deleted"]?.Value<bool>() ?? false;
+                bool includeEdges = parameters?["include_edges"]?.Value<bool>() ?? false;
 
                 Dictionary<string, object> attrsFilter = null;
                 var f = parameters?["attrs_filter"];
@@ -64,7 +65,7 @@ namespace RevitMCPKgCommandSet.Commands
                 }
 
                 _handler.SetParameters(nodeType, attrsFilter, includeSoftDeleted,
-                    select, aggOp, aggField, aggGroupBy, join);
+                    select, aggOp, aggField, aggGroupBy, join, includeEdges);
 
                 if (RaiseAndWaitForCompletion(10000))
                     return _handler.Result;
