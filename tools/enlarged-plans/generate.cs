@@ -79,6 +79,8 @@ var phaseByName = new System.Collections.Generic.Dictionary<string, ElementId>()
 foreach (Phase ph in doc.Phases) phaseByName[ph.Name] = ph.Id;
 var phaseFilterByName = new System.Collections.Generic.Dictionary<string, ElementId>();
 foreach (var e in new FilteredElementCollector(doc).OfClass(typeof(PhaseFilter)).Cast<PhaseFilter>()) phaseFilterByName[e.Name] = e.Id;
+var catByName = new System.Collections.Generic.Dictionary<string, Category>();
+foreach (Category c in doc.Settings.Categories) if (c != null && !catByName.ContainsKey(c.Name)) catByName[c.Name] = c;
 
 // --- rooms cibles ---
 var rooms = new System.Collections.Generic.List<Autodesk.Revit.DB.Architecture.Room>();
@@ -175,8 +177,8 @@ CurveLoop OffsetOut(CurveLoop loop, double dist)
     return a ?? b;
 }
 
-// applique la config figée (discipline / phase / filtre / plage) à une vue
-// CRÉÉE de zéro — pas de dépendance à une vue prototype existante.
+// applique la config COMPLÈTE figée à une vue créée de zéro — from-scratch,
+// sans vue prototype : scalaires + plage + Visibilité/Graphismes.
 void ApplyViewConfig(ViewPlan vp)
 {
     var disc = (string)viewCfg["discipline"];
@@ -200,6 +202,22 @@ void ApplyViewConfig(ViewPlan vp)
             setp(PlanViewPlane.BottomClipPlane, "bottom"); setp(PlanViewPlane.ViewDepthPlane, "depth");
             vp.SetViewRange(vr);
         } catch { }
+    // Visibilité/Graphismes : masquer les catégories listées (Coupes, etc.)
+    var hc = viewCfg["hiddenCategories"] as Newtonsoft.Json.Linq.JArray;
+    if (hc != null)
+        foreach (var t in hc)
+        {
+            var cn = (string)t; if (string.IsNullOrEmpty(cn) || !catByName.ContainsKey(cn)) continue;
+            try { if (vp.CanCategoryBeHidden(catByName[cn].Id)) vp.SetCategoryHidden(catByName[cn].Id, true); } catch { }
+        }
+    // masquer génériquement les CAD importés (noms de catégorie project-specific)
+    if (viewCfg["hideImportedCad"] != null && (bool)viewCfg["hideImportedCad"])
+        foreach (Category c in doc.Settings.Categories)
+        {
+            if (c == null) continue; var ln = c.Name.ToLowerInvariant();
+            if (ln.EndsWith(".dwg") || ln.EndsWith(".dxf") || ln.EndsWith(".dgn"))
+                try { if (vp.CanCategoryBeHidden(c.Id)) vp.SetCategoryHidden(c.Id, true); } catch { }
+        }
 }
 
 if (apply && tbSym != null && !tbSym.IsActive) tbSym.Activate();
@@ -286,8 +304,8 @@ foreach (var room in rooms)
         if (ln == null || !levelByName.ContainsKey(ln)) { Print("    niveau introuvable: " + ln); continue; }
         var lvl = levelByName[ln];
 
-        // Vue CRÉÉE de zéro puis config figée appliquée (discipline / phase /
-        // filtre / plage) — aucune dépendance à une vue existante.
+        // Vue CRÉÉE de zéro puis config COMPLÈTE appliquée (discipline / phase /
+        // filtre / plage / Visibilité-Graphismes) — from-scratch, sans vue tierce.
         ViewPlan vplan = ViewPlan.Create(doc, vftId, lvl.Id);
         if (vplan == null) { Print("    creation vue KO (niveau " + ln + ")"); continue; }
         try { vplan.ViewTemplateId = ElementId.InvalidElementId; } catch { }
@@ -313,8 +331,6 @@ foreach (var room in rooms)
         cb.Min = new XYZ(bb.Min.X - mgFt, bb.Min.Y - mgFt, lvl.Elevation - 3.3);
         cb.Max = new XYZ(bb.Max.X + mgFt, bb.Max.Y + mgFt, lvl.Elevation + 13.0);
         vplan.CropBoxActive = true; vplan.CropBoxVisible = true; vplan.CropBox = cb;
-        var ac = vplan.get_Parameter(BuiltInParameter.VIEWER_ANNOTATION_CROP_ACTIVE);
-        if (ac != null && !ac.IsReadOnly) ac.Set(1);
 
         // crop qui suit le contour de la pièce (offset de la marge), sinon rectangle
         string cropKind = "rectangle (bbox)";
@@ -328,6 +344,11 @@ foreach (var room in rooms)
             }
             else cropKind = "rectangle (contour indispo)";
         }
+
+        // (ré)activer le crop EN DERNIER : SetCropShape peut le désactiver
+        vplan.CropBoxActive = true; vplan.CropBoxVisible = true;
+        var ac = vplan.get_Parameter(BuiltInParameter.VIEWER_ANNOTATION_CROP_ACTIVE);
+        if (ac != null && !ac.IsReadOnly) ac.Set(1);
 
         double px = (cX + vi * multiOff) / MM, py = cY / MM;
         if (Viewport.CanAddViewToSheet(doc, sheet.Id, vplan.Id))

@@ -37,14 +37,17 @@ Toujours lancer un **`dry-run`** d'abord pour vérifier les échelles.
    plus fine — en gardant la **plus grande marge possible** qui la tient ; marge
    marquée `(auto)`. Si même à `marginMinM` l'échelle grossière reste inévitable,
    on **garde la marge par défaut** (0,5).
-4. Vue **créée de zéro** (`ViewPlan.Create`) puis **config figée** appliquée
-   (`viewConfig` : discipline / phase / filtre de phase / plage de vue) — **aucune
-   dépendance à une vue prototype existante** (marche from-scratch). Puis `Scale`,
-   `DetailLevel`, `viewFields` (`ROLEX-ETAPES`, `Utilisations de la vue`…),
-   annotation crop.
+4. Vue **créée de zéro** (`ViewPlan.Create`) puis **config COMPLÈTE figée**
+   appliquée (`viewConfig`) — **aucune dépendance à une vue prototype** (from-scratch) :
+   discipline / phase / filtre de phase / plage de vue **ET Visibilité-Graphismes**
+   (`hiddenCategories` : masque *Coupes*, analytiques, DWG précis… ; les
+   *Élévations* restent visibles). Puis `Scale`, `DetailLevel`, `viewFields`
+   (`ROLEX-ETAPES`, `Utilisations de la vue`…).
 5. Crop : box rectangulaire = bbox ± marge ; si `cropFollowsRoom`, la **forme**
    du crop suit le **contour de la pièce** offset de la marge (polyligne fermée
    reconstruite depuis les segments *Finish*, non contigus). Fallback rectangle.
+   Le crop est **(ré)activé en dernier** (après `SetCropShape`, qui peut le
+   désactiver — sinon crop absent, cf. bug 401).
 6. Feuille `A3 horizontal`, `SheetNumber`/`Name` templatés, `.Category` posé,
    cartouche prérempli (`"today"` → date du jour). `onExisting` :
    `skip` | `duplicate` (feuille `-D` à côté de l'existante) ; overridable par
@@ -61,10 +64,12 @@ Toujours lancer un **`dry-run`** d'abord pour vérifier les échelles.
   `CurveLoop.CreateViaOffset`. Sur certaines pièces (contour non reconstructible
   ou offset auto-intersectant), fallback **bbox rectangulaire** automatique
   (observé sur 402 / 407). Jamais de dépendance à une vue tierce.
-- **Config de vue** entièrement dans `viewConfig` (discipline / phase / filtre /
-  plage) — reverse-engineered une fois des vues existantes. À réajuster si le
-  standard de bureau change. Aucune vue prototype requise.
-- Marge par défaut 0,5 m ; `411` mis à 0,25 m dans les specs pour rester en 1:25
-  (sinon le pipeline bascule en 1:35, déterministe).
+- **Config de vue** entièrement dans `viewConfig`, y compris la **V/G**
+  (`hiddenCategories`) — reverse-engineered des vues existantes (diff vue fraîche
+  vs cible = liste exacte à masquer). À réajuster par projet (les 2 DWG masqués
+  sont project-specific). Aucune vue prototype requise.
+- Marge par défaut 0,5 m ; l'auto-tune la réduit jusqu'à 0,2 m si besoin (ex. 406
+  → 0,27 pour tenir en 1:35 ; 411 → 0,2 pour 1:25). Override manuel possible via
+  `marginByNumber`.
 - `drawableMm` (375×270) et `viewportCenterMm` mesurés sur les feuilles A3 Rolex —
   à réajuster si le cartouche change.

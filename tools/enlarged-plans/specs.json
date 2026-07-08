@@ -21,12 +21,22 @@
   "onExisting": "skip",
   "duplicateSuffix": "-D",
 
-  "_viewConfig": "Config de vue figée explicitement (reverse-engineered des vues existantes) et appliquée à une vue CRÉÉE de zéro — aucune dépendance à une vue prototype existante. Plage de vue relative au niveau de la vue.",
+  "_viewConfig": "Config de vue COMPLÈTE figée (reverse-engineered des vues existantes), appliquée à une vue créée de zéro — from-scratch, sans dépendance à une vue tierce. Inclut la Visibilité/Graphismes (hiddenCategories) : sans ça les coupes réapparaissent. Les élévations restent visibles (défaut). viewRange relatif au niveau de la vue.",
   "viewConfig": {
     "discipline": "Architectural",
     "phase": "Nouvelle construction",
     "phaseFilter": "All Remaining from Prior Phases + New in Current",
-    "viewRangeM": { "top": 2.3, "cut": 1.2, "bottom": -0.5, "depth": -0.5 }
+    "viewRangeM": { "top": 2.3, "cut": 1.2, "bottom": -0.5, "depth": -0.5 },
+    "_hiddenCategoriesNote": "Liste EXACTE des catégories masquées de la vue de référence (les 2 DWG en fin sont project-specific — les autres DWG restent visibles). À réajuster par projet.",
+    "hiddenCategories": [
+      "Coupes", "Parking", "Zones de définition", "Topographie", "Plantes",
+      "Volume", "Eléments", "Espaces analytiques", "Liaisons analytiques",
+      "Membres analytiques", "Noeuds analytiques", "Ouvertures analytiques",
+      "Panneaux analytiques", "Segments de canalisation analytiques",
+      "Segments de gaine analytiques", "Surfaces analytiques",
+      "B25-4254_Tunisie_Ben-Jannet_LAYOUT_R1.dwg",
+      "B25-4254_Tunisie_Ben-Jannet_LAYOUT_RDC.dwg"
+    ]
   },
 
   "viewNameTemplate": "{num} - {local} - Enlarged Plan",
