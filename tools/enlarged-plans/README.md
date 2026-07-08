@@ -52,8 +52,9 @@ Toujours lancer un **`dry-run`** d'abord pour vérifier les échelles.
    cartouche prérempli (`"today"` → date du jour). `onExisting` :
    `skip` | `duplicate` (feuille `-D` à côté de l'existante) ; overridable par
    `parameters[3]`.
-7. Viewport centré (`viewportCenterMm`) ; plusieurs niveaux (Stairs) → viewports
-   décalés de `multiViewportOffsetMm`.
+7. Viewport centré (`viewportCenterMm`). Pièce **multi-niveaux** (ex. escalier via
+   `levelByNumber`) → **une feuille par niveau** (`{n°}-D {niveau}`, ex.
+   `410-D N0` / `410-D N1`), pas plusieurs vues sur une même feuille.
 
 ## Notes / limites
 
@@ -66,8 +67,11 @@ Toujours lancer un **`dry-run`** d'abord pour vérifier les échelles.
   (observé sur 402 / 407). Jamais de dépendance à une vue tierce.
 - **Config de vue** entièrement dans `viewConfig`, y compris la **V/G**
   (`hiddenCategories`) — reverse-engineered des vues existantes (diff vue fraîche
-  vs cible = liste exacte à masquer). À réajuster par projet (les 2 DWG masqués
-  sont project-specific). Aucune vue prototype requise.
+  vs cible = liste exacte à masquer). Gère les **sous-catégories** via la syntaxe
+  `"Parent > Sous-cat"` (ex. `Lignes > <Séparation de pièce>` = les traits de
+  construction). À réajuster par projet (2 DWG masqués project-specific). Aucune
+  vue prototype requise. NB : quelques sous-catégories analytiques restent sous un
+  parent masqué (nul impact visuel), non listées.
 - Marge par défaut 0,5 m ; l'auto-tune la réduit jusqu'à 0,2 m si besoin (ex. 406
   → 0,27 pour tenir en 1:35 ; 411 → 0,2 pour 1:25). Override manuel possible via
   `marginByNumber`.

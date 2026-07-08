@@ -202,13 +202,23 @@ void ApplyViewConfig(ViewPlan vp)
             setp(PlanViewPlane.BottomClipPlane, "bottom"); setp(PlanViewPlane.ViewDepthPlane, "depth");
             vp.SetViewRange(vr);
         } catch { }
-    // Visibilité/Graphismes : masquer les catégories listées (Coupes, etc.)
+    // Visibilité/Graphismes : masquer catégories ET sous-catégories listées.
+    // "Parent > Sous-cat" cible une sous-catégorie (ex. Lignes > <Séparation de
+    // pièce> = les traits de construction). Sinon catégorie de premier niveau.
     var hc = viewCfg["hiddenCategories"] as Newtonsoft.Json.Linq.JArray;
     if (hc != null)
         foreach (var t in hc)
         {
-            var cn = (string)t; if (string.IsNullOrEmpty(cn) || !catByName.ContainsKey(cn)) continue;
-            try { if (vp.CanCategoryBeHidden(catByName[cn].Id)) vp.SetCategoryHidden(catByName[cn].Id, true); } catch { }
+            var cn = (string)t; if (string.IsNullOrEmpty(cn)) continue;
+            Category tc = null; int gt = cn.IndexOf(" > ");
+            if (gt > 0)
+            {
+                var pn = cn.Substring(0, gt); var sn = cn.Substring(gt + 3);
+                if (catByName.ContainsKey(pn) && catByName[pn].SubCategories != null)
+                    foreach (Category sc in catByName[pn].SubCategories) if (sc != null && sc.Name == sn) { tc = sc; break; }
+            }
+            else if (catByName.ContainsKey(cn)) tc = catByName[cn];
+            if (tc != null) try { if (vp.CanCategoryBeHidden(tc.Id)) vp.SetCategoryHidden(tc.Id, true); } catch { }
         }
     // masquer génériquement les CAD importés (noms de catégorie project-specific)
     if (viewCfg["hideImportedCad"] != null && (bool)viewCfg["hideImportedCad"])
@@ -267,42 +277,38 @@ foreach (var room in rooms)
     if (!apply) continue;
     if (tbId == null || vftId == null) { Print("    SKIP apply: cartouche/VFT manquant"); continue; }
 
-    string sheetNo = num;
-    if (exists)
-    {
-        if (onExisting == "duplicate")
-        {
-            sheetNo = num + duplicateSuffix; int d = 1;
-            while (sheetNums.Contains(sheetNo)) sheetNo = num + duplicateSuffix + (++d);
-        }
-        else { Print("    feuille " + num + " existe -> skip (onExisting=" + onExisting + ")"); continue; }
-    }
-
-    // niveaux (override specs sinon niveau de la piece)
+    // niveaux (override specs sinon niveau de la piece). Multi-niveaux (escalier)
+    // -> UNE FEUILLE PAR NIVEAU (pas plusieurs vues sur une même feuille).
     var lvlNames = new System.Collections.Generic.List<string>();
     if (levelBy[num] != null) foreach (var t in (Newtonsoft.Json.Linq.JArray)levelBy[num]) lvlNames.Add((string)t);
     if (lvlNames.Count == 0) { var lv = room.Level; if (lv != null) lvlNames.Add(lv.Name); }
+    bool multi = lvlNames.Count > 1;
 
-    var sheet = ViewSheet.Create(doc, tbId);
-    try { sheet.SheetNumber = sheetNo; } catch { Print("    n° " + sheetNo + " refuse, garde " + sheet.SheetNumber); }
-    sheetNums.Add(sheet.SheetNumber);
-    sheet.Name = sname;
-
-    var pc = sheet.LookupParameter(".Category");
-    if (pc != null && !pc.IsReadOnly && pc.StorageType == StorageType.String) pc.Set(category);
-    foreach (var f in fields)
-    {
-        var val = (string)f.Value; if (string.IsNullOrEmpty(val)) continue;
-        if (val == "today") val = System.DateTime.Now.ToString("dd/MM/yy");
-        var p = sheet.LookupParameter(f.Key);
-        if (p != null && !p.IsReadOnly && p.StorageType == StorageType.String) p.Set(val);
-    }
-
-    int vi = 0;
     foreach (var ln in lvlNames)
     {
         if (ln == null || !levelByName.ContainsKey(ln)) { Print("    niveau introuvable: " + ln); continue; }
         var lvl = levelByName[ln];
+
+        // n° feuille : -D si l'existant occupe déjà le n°, + niveau si multi-niveaux
+        string sheetNo = num;
+        if (sheetNums.Contains(sheetNo)) sheetNo = num + duplicateSuffix;
+        if (multi) sheetNo = sheetNo + " " + ln;
+        { string bnp = sheetNo; int d = 2; while (sheetNums.Contains(sheetNo)) sheetNo = bnp + "-" + (d++); }
+        string thisSname = multi ? sname + " " + ln : sname;
+
+        var sheet = ViewSheet.Create(doc, tbId);
+        try { sheet.SheetNumber = sheetNo; } catch { Print("    n° " + sheetNo + " refuse, garde " + sheet.SheetNumber); }
+        sheetNums.Add(sheet.SheetNumber);
+        sheet.Name = thisSname;
+        var pc = sheet.LookupParameter(".Category");
+        if (pc != null && !pc.IsReadOnly && pc.StorageType == StorageType.String) pc.Set(category);
+        foreach (var f in fields)
+        {
+            var val = (string)f.Value; if (string.IsNullOrEmpty(val)) continue;
+            if (val == "today") val = System.DateTime.Now.ToString("dd/MM/yy");
+            var p = sheet.LookupParameter(f.Key);
+            if (p != null && !p.IsReadOnly && p.StorageType == StorageType.String) p.Set(val);
+        }
 
         // Vue CRÉÉE de zéro puis config COMPLÈTE appliquée (discipline / phase /
         // filtre / plage / Visibilité-Graphismes) — from-scratch, sans vue tierce.
@@ -310,16 +316,14 @@ foreach (var room in rooms)
         if (vplan == null) { Print("    creation vue KO (niveau " + ln + ")"); continue; }
         try { vplan.ViewTemplateId = ElementId.InvalidElementId; } catch { }
         ApplyViewConfig(vplan);
-        string srcCfg = "create+viewConfig";
 
-        string tn = lvlNames.Count > 1 ? vname + " " + ln : vname;
+        string tn = multi ? vname + " " + ln : vname;
         string bn = tn; int k = 1; while (viewNames.Contains(tn)) tn = bn + " (" + (++k) + ")";
         vplan.Name = tn; viewNames.Add(tn);
 
         vplan.Scale = scale;
         try { vplan.DetailLevel = detail; } catch { }
 
-        // variables métier de la vue (ROLEX-ETAPES, Utilisations de la vue, ...)
         foreach (var f in viewFields)
         {
             var vv = (string)f.Value; if (string.IsNullOrEmpty(vv)) continue;
@@ -332,7 +336,6 @@ foreach (var room in rooms)
         cb.Max = new XYZ(bb.Max.X + mgFt, bb.Max.Y + mgFt, lvl.Elevation + 13.0);
         vplan.CropBoxActive = true; vplan.CropBoxVisible = true; vplan.CropBox = cb;
 
-        // crop qui suit le contour de la pièce (offset de la marge), sinon rectangle
         string cropKind = "rectangle (bbox)";
         if (cropFollowsRoom)
         {
@@ -350,15 +353,13 @@ foreach (var room in rooms)
         var ac = vplan.get_Parameter(BuiltInParameter.VIEWER_ANNOTATION_CROP_ACTIVE);
         if (ac != null && !ac.IsReadOnly) ac.Set(1);
 
-        double px = (cX + vi * multiOff) / MM, py = cY / MM;
+        double px = cX / MM, py = cY / MM;
         if (Viewport.CanAddViewToSheet(doc, sheet.Id, vplan.Id))
             Viewport.Create(doc, sheet.Id, vplan.Id, new XYZ(px, py, 0));
         else Print("    vue non placable: " + tn);
-        Print("    vue '" + tn + "'  1:" + scale + "  config=" + srcCfg + "  crop=" + cropKind);
-        vi++;
+        made++;
+        Print("    -> feuille [" + sheet.SheetNumber + "] '" + sheet.Name + "'  vue '" + tn + "'  1:" + scale + "  crop=" + cropKind);
     }
-    made++;
-    Print("    -> feuille [" + sheet.SheetNumber + "] '" + sheet.Name + "' + " + vi + " vue(s), .Category=" + category);
 }
 
 Print("=== " + (apply ? ("feuilles creees: " + made) : "DRY-RUN — aucune ecriture") + " ===");

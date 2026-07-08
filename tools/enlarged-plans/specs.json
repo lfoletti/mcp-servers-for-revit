@@ -27,7 +27,7 @@
     "phase": "Nouvelle construction",
     "phaseFilter": "All Remaining from Prior Phases + New in Current",
     "viewRangeM": { "top": 2.3, "cut": 1.2, "bottom": -0.5, "depth": -0.5 },
-    "_hiddenCategoriesNote": "Liste EXACTE des catégories masquées de la vue de référence (les 2 DWG en fin sont project-specific — les autres DWG restent visibles). À réajuster par projet.",
+    "_hiddenCategoriesNote": "Catégories ET sous-catégories masquées de la vue de référence (format 'Parent > Sous-cat' pour une sous-catégorie). '<Séparation de pièce>' = les traits de construction visibles sinon. Les 2 DWG sont project-specific.",
     "hiddenCategories": [
       "Coupes", "Parking", "Zones de définition", "Topographie", "Plantes",
       "Volume", "Eléments", "Espaces analytiques", "Liaisons analytiques",
@@ -35,7 +35,16 @@
       "Panneaux analytiques", "Segments de canalisation analytiques",
       "Segments de gaine analytiques", "Surfaces analytiques",
       "B25-4254_Tunisie_Ben-Jannet_LAYOUT_R1.dwg",
-      "B25-4254_Tunisie_Ben-Jannet_LAYOUT_RDC.dwg"
+      "B25-4254_Tunisie_Ben-Jannet_LAYOUT_RDC.dwg",
+      "Lignes > <Séparation de pièce>",
+      "Pièces > Motif/couleur",
+      "Site > Paysage", "Site > Terre-plein", "Site > Limite de propriété",
+      "Assemblages structurels > Perçages", "Assemblages structurels > Platines",
+      "Assemblages structurels > Ancrages", "Assemblages structurels > Référence",
+      "Assemblages structurels > Profils", "Assemblages structurels > Boulons",
+      "Assemblages structurels > Goujons", "Assemblages structurels > Autres",
+      "Assemblages structurels > Soudures", "Assemblages structurels > Modificateurs",
+      "Assemblages structurels > Symbole"
     ]
   },
 
