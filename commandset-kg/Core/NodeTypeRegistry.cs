@@ -31,7 +31,7 @@ namespace RevitMCPKgCommandSet.Core
             ["FacadeElement"] = new NodeTypeSpec(new[] { "family_name", "type_name", "position", "level_ref" }),
             ["Room"] = new NodeTypeSpec(
                 new[] { "name", "level_ref" },
-                new[] { "area", "boundary_walls", "use_subcategory" }),
+                new[] { "area", "number", "boundary_walls", "use_subcategory" }),
             ["WallType"] = new NodeTypeSpec(
                 new[] { "name", "total_thickness" },
                 new[] { "layers_summary" }),

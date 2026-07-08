@@ -529,6 +529,12 @@ namespace RevitMCPKgCommandSet.Services
                 ["area"] = RoundM(room.Area * SqFeetToSqMetres),
             };
 
+            // Room Number (ROOM_NUMBER) — the human identifier that keys a room
+            // to its enlarged-plan sheet (e.g. "409" → sheet [409]). Optional:
+            // omitted when empty (e.g. back-office rooms carry no number).
+            var number = TryGetParamString(room, BuiltInParameter.ROOM_NUMBER);
+            if (!string.IsNullOrEmpty(number)) attrs["number"] = number;
+
             var boundaryWalls = ReadBoundaryWallIds(room)
                 .Select(id => $"revit_{id}")
                 .ToList();
