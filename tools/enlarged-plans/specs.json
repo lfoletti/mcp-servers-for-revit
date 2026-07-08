@@ -1,0 +1,68 @@
+{
+  "_doc": "Specs du pipeline Enlarged Plans (feuilles 401-411) generees depuis les rooms. Lu par generate.cs via revit_execute (parameters[0] = chemin de ce fichier). Editer ici, pas dans le script.",
+
+  "titleBlockFamily": "oi_Rolex_Cartouche_A3_horizontal",
+  "floorPlanViewFamilyType": "Plan d'étage",
+  "category": "03 - DERIVED",
+
+  "numberRegex": "^(40[0-9]|41[01])$",
+  "marginM": 0.5,
+  "marginMinM": 0.2,
+  "marginAutoTune": true,
+  "scaleLadder": [25, 35, 50],
+
+  "drawableMm": { "w": 375, "h": 270 },
+  "annotationAllowanceMm": { "w": 35, "h": 15 },
+  "viewportCenterMm": { "x": 210, "y": 160 },
+  "multiViewportOffsetMm": 190,
+
+  "detailLevel": "Fine",
+  "cropFollowsRoom": true,
+  "onExisting": "skip",
+  "duplicateSuffix": "-D",
+
+  "_viewConfig": "Config de vue figée explicitement (reverse-engineered des vues existantes) et appliquée à une vue CRÉÉE de zéro — aucune dépendance à une vue prototype existante. Plage de vue relative au niveau de la vue.",
+  "viewConfig": {
+    "discipline": "Architectural",
+    "phase": "Nouvelle construction",
+    "phaseFilter": "All Remaining from Prior Phases + New in Current",
+    "viewRangeM": { "top": 2.3, "cut": 1.2, "bottom": -0.5, "depth": -0.5 }
+  },
+
+  "viewNameTemplate": "{num} - {local} - Enlarged Plan",
+  "sheetNameTemplate": "{local} - Enlarged Plan",
+
+  "titleBlockFields": {
+    "Dessiné par": "",
+    "Conçu par": "",
+    "Vérifié par": "",
+    "Approuvé par": "",
+    "Date de fin de la feuille": "today"
+  },
+
+  "viewFields": {
+    "ROLEX-ETAPES": "03-DERIVED",
+    "Utilisations de la vue": "PRESENTATION"
+  },
+
+  "localByNumber": {
+    "401": "Welcome & Exhibition Area 1",
+    "402": "Exhibition Area 2",
+    "403": "Sales Area 1",
+    "404": "Sales Area 3",
+    "405": "VIP Lounge",
+    "406": "Exhibition Area 3",
+    "407": "Lift SAS",
+    "408": "Bar",
+    "409": "Sales Area 2",
+    "410": "Stairs",
+    "411": "Dining Exhibition Room"
+  },
+
+  "marginByNumber": {
+  },
+
+  "levelByNumber": {
+    "410": ["N0", "N1"]
+  }
+}
