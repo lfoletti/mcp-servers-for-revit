@@ -163,9 +163,14 @@ namespace RevitMCPKgCommandSet.Services
                     kg.AttachSink(sink);
                     var reader = new RevitElementReader(doc);
                     ScanAndProject(doc, kg, reader, typeof(Level));
+                    // Materials before any type so the has_material edges emitted
+                    // when a type is projected resolve against live nodes.
+                    ScanMaterials(doc, kg, reader);
                     ScanAndProject(doc, kg, reader, typeof(WallType));
+                    ScanAndProject(doc, kg, reader, typeof(FloorType));
                     ScanFamilySymbols(doc, kg, reader);
                     ScanAndProject(doc, kg, reader, typeof(Wall));
+                    ScanAndProject(doc, kg, reader, typeof(Floor));
                     ScanFamilyInstances(doc, kg, reader);
                     ScanRooms(doc, kg, reader);
                     sink.Flush();
@@ -197,10 +202,15 @@ namespace RevitMCPKgCommandSet.Services
                 .OfClass(typeof(FamilySymbol))
                 .Cast<FamilySymbol>()
                 .Where(fs => fs.Category != null &&
-                             (fs.Category.Id.Value == (long)BuiltInCategory.OST_Windows ||
-                              fs.Category.Id.Value == (long)BuiltInCategory.OST_Doors))
+                             fs.Category.CategoryType == CategoryType.Model)
                 .Select(fs => fs.Id.Value)
                 .ToList();
+            Projection.ApplyAdded(kg, reader, ids);
+        }
+
+        private static void ScanMaterials(Document doc, ProjectKg kg, RevitElementReader reader)
+        {
+            var ids = reader.ReferencedMaterialIds().ToList();
             Projection.ApplyAdded(kg, reader, ids);
         }
 
