@@ -17,6 +17,13 @@ namespace RevitMCPKgCommandSet.Core
         // compound-structure layers. Owned by the model like every F1 edge.
         public const string HasMaterial = "has_material";
 
+        // Derived — computed by an on-demand batch tool (kg_compute_adjacency),
+        // NOT repatched on every Revit transaction like F1. Owned by the KG but
+        // periodic: fresh only right after a run, then potentially stale. Each
+        // edge stamps computed_at_turn so a later kg_diff_since can tell whether
+        // a Room/Wall/RoomSeparationLine changed since the adjacency was built.
+        public const string AdjacentTo = "adjacent_to";
+
         // F2 — semantic annotations authored via kg_annotate (DESIGN §2.2,
         // L-10). Owned by the KG: untouched by Revit's DocumentChanged and
         // never repatched. Survive soft-delete + undo/redo so the audit
@@ -40,9 +47,15 @@ namespace RevitMCPKgCommandSet.Core
             ReplacedBy, Tagged, ViolatesRule, ImplementsIntent, Contains,
         };
 
+        public static readonly HashSet<string> Derived = new HashSet<string>
+        {
+            AdjacentTo,
+        };
+
         public static readonly HashSet<string> All = new HashSet<string>
         {
             AtLevel, IsType, Hosts, BoundedBy, ConnectsAt, DerivedFrom, HasMaterial,
+            AdjacentTo,
             ReplacedBy, Tagged, ViolatesRule, ImplementsIntent, Contains,
         };
     }

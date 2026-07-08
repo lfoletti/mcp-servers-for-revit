@@ -64,6 +64,13 @@ namespace RevitMCPKgCommandSet.Core
             ["StairsType"] = new NodeTypeSpec(new[] { "name", "tread_depth_m", "riser_height_m" }),
             ["ModelLine"] = new NodeTypeSpec(new[] { "p1", "p2", "length" }),
             ["DetailLine"] = new NodeTypeSpec(new[] { "p1", "p2", "length" }),
+            // Room-bounding sketch line (OST_RoomSeparationLines) — completes a
+            // room's frontier where no wall exists. Reached from a Room via
+            // bounded_by, exactly like a Wall. Projected per-element; level_ref
+            // is best-effort (nearest level to the curve elevation).
+            ["RoomSeparationLine"] = new NodeTypeSpec(
+                new[] { "p1", "p2", "length" },
+                new[] { "level_ref" }),
         };
 
         public static readonly IReadOnlyCollection<string> SessionNodeTypes = BuildSessionTypes();

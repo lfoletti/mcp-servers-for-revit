@@ -172,6 +172,9 @@ namespace RevitMCPKgCommandSet.Services
                     ScanAndProject(doc, kg, reader, typeof(Wall));
                     ScanAndProject(doc, kg, reader, typeof(Floor));
                     ScanFamilyInstances(doc, kg, reader);
+                    // Separation lines before rooms so a room's bounded_by edge
+                    // to a separation line resolves against a live node.
+                    ScanRoomSeparationLines(doc, kg, reader);
                     ScanRooms(doc, kg, reader);
                     sink.Flush();
                 }
@@ -226,6 +229,13 @@ namespace RevitMCPKgCommandSet.Services
                 .Select(fi => fi.Id.Value)
                 .ToList();
             Projection.ApplyAdded(kg, reader, ids);
+        }
+
+        // Room-separation lines (OST_RoomSeparationLines) — projected before
+        // rooms so bounded_by(Room → RoomSeparationLine) resolves this pass.
+        private static void ScanRoomSeparationLines(Document doc, ProjectKg kg, RevitElementReader reader)
+        {
+            Projection.ApplyAdded(kg, reader, reader.RoomSeparationLineIds().ToList());
         }
 
         // Rooms are scanned last so their bounded_by edges resolve against

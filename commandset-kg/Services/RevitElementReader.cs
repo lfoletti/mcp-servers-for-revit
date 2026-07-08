@@ -45,6 +45,7 @@ namespace RevitMCPKgCommandSet.Services
                 case Floor fl: return ReadFloorAttrs(fl);
                 case Room room: return ReadRoomAttrs(room);
                 case Material mat: return ReadMaterialAttrs(mat);
+                case CurveElement ce when IsRoomSeparationLine(ce): return ReadSeparationLineAttrs(ce);
                 case FamilyInstance fi:
                     if (IsOpening(fi)) return ReadOpeningAttrs(fi);
                     if (IsFacadeElement(fi)) return ReadFacadeElementAttrs(fi);
@@ -118,6 +119,8 @@ namespace RevitMCPKgCommandSet.Services
                 .WhereElementIsNotElementType()
                 .Select(e => SafeIdValue(e.Id))
                 .Where(v => v > 0));
+
+            ids.AddRange(RoomSeparationLineIds());
 
             // Only materials referenced by a projected type's compound structure
             // (WallType + FloorType) — mirrors what ScanMaterials projects, so
@@ -254,8 +257,17 @@ namespace RevitMCPKgCommandSet.Services
                 {
                     var lvlId = SafeIdValue(room.LevelId);
                     if (lvlId > 0) yield return new EdgeSpec(lvlId, EdgeTypes.AtLevel);
-                    foreach (var wallId in ReadBoundaryWallIds(room))
-                        yield return new EdgeSpec(wallId, EdgeTypes.BoundedBy);
+                    // bounded_by spans both walls and room-separation lines:
+                    // together they close the room's frontier. The attr
+                    // boundary_walls stays walls-only (ReadRoomAttrs).
+                    foreach (var boundId in ReadBoundaryElementIds(room))
+                        yield return new EdgeSpec(boundId, EdgeTypes.BoundedBy);
+                    break;
+                }
+                case CurveElement ce when IsRoomSeparationLine(ce):
+                {
+                    var lvlId = NearestLevelIdByElevation(SeparationLineZFeet(ce));
+                    if (lvlId > 0) yield return new EdgeSpec(lvlId, EdgeTypes.AtLevel);
                     break;
                 }
             }
@@ -275,6 +287,7 @@ namespace RevitMCPKgCommandSet.Services
                 case Floor _: return "Floor";
                 case Room _: return "Room";
                 case Material _: return "Material";
+                case CurveElement ce when IsRoomSeparationLine(ce): return "RoomSeparationLine";
                 case FamilyInstance fi:
                     if (IsCategory(fi, BuiltInCategory.OST_Windows)) return "Window";
                     if (IsCategory(fi, BuiltInCategory.OST_Doors)) return "Door";
@@ -549,6 +562,105 @@ namespace RevitMCPKgCommandSet.Services
                 }
             }
             return result;
+        }
+
+        // Distinct boundary ElementIds that bound the room (Finish location):
+        // Walls AND room-separation lines together. Non-bounding segments
+        // (adjacent rooms) and unenclosed rooms yield nothing. Feeds bounded_by
+        // so the room's frontier is closed; boundary_walls attr stays walls-only.
+        private List<long> ReadBoundaryElementIds(Room room)
+        {
+            var result = new List<long>();
+            var seen = new HashSet<long>();
+            IList<IList<BoundarySegment>> loops;
+            try { loops = room.GetBoundarySegments(new SpatialElementBoundaryOptions()); }
+            catch { return result; }
+            if (loops == null) return result;
+
+            foreach (var loop in loops)
+            {
+                if (loop == null) continue;
+                foreach (var seg in loop)
+                {
+                    if (seg == null) continue;
+                    var id = SafeIdValue(seg.ElementId);
+                    if (id <= 0 || !seen.Add(id)) continue;
+                    var el = GetElement(id);
+                    if (el is Wall || IsRoomSeparationLine(el)) result.Add(id);
+                }
+            }
+            return result;
+        }
+
+        // ---- room separation lines ----
+
+        // Distinct OST_RoomSeparationLines curve-element ElementIds. Public so
+        // the bootstrap scan (KgV2DocumentWatcher) and drift coverage
+        // (EnumerateAllElementIds) share a single source of truth.
+        public IEnumerable<long> RoomSeparationLineIds() =>
+            new FilteredElementCollector(_doc)
+                .OfCategory(BuiltInCategory.OST_RoomSeparationLines)
+                .WhereElementIsNotElementType()
+                .Select(e => SafeIdValue(e.Id))
+                .Where(v => v > 0)
+                .ToList();
+
+        private static bool IsRoomSeparationLine(Element el) =>
+            el is CurveElement && IsCategory(el, BuiltInCategory.OST_RoomSeparationLines);
+
+        private Dictionary<string, object> ReadSeparationLineAttrs(CurveElement ce)
+        {
+            double[] p1 = null, p2 = null;
+            double length = 0;
+            var curve = TryGetGeometryCurve(ce);
+            if (curve != null)
+            {
+                var a = curve.GetEndPoint(0);
+                var b = curve.GetEndPoint(1);
+                p1 = new[] { RoundM(a.X * FeetToMetres), RoundM(a.Y * FeetToMetres) };
+                p2 = new[] { RoundM(b.X * FeetToMetres), RoundM(b.Y * FeetToMetres) };
+                length = RoundM(curve.ApproximateLength * FeetToMetres);
+            }
+
+            var attrs = new Dictionary<string, object>
+            {
+                ["p1"] = p1 ?? new[] { 0.0, 0.0 },
+                ["p2"] = p2 ?? new[] { 0.0, 0.0 },
+                ["length"] = length,
+            };
+
+            var lvlId = NearestLevelIdByElevation(SeparationLineZFeet(ce));
+            if (lvlId > 0) attrs["level_ref"] = $"revit_{lvlId}";
+            return attrs;
+        }
+
+        private static Curve TryGetGeometryCurve(CurveElement ce)
+        {
+            try { return ce.GeometryCurve; } catch { return null; }
+        }
+
+        private static double SeparationLineZFeet(CurveElement ce)
+        {
+            var curve = TryGetGeometryCurve(ce);
+            if (curve == null) return double.NaN;
+            try { return curve.GetEndPoint(0).Z; } catch { return double.NaN; }
+        }
+
+        // Nearest Level ElementId to a given elevation in feet. Separation lines
+        // carry no direct level, so we snap to the closest one — deterministic,
+        // so it stays stable across bootstrap and drift. 0 if unknown / no levels.
+        private long NearestLevelIdByElevation(double zFeet)
+        {
+            if (double.IsNaN(zFeet)) return 0;
+            long bestId = 0;
+            double bestDelta = double.MaxValue;
+            foreach (var lvl in new FilteredElementCollector(_doc)
+                         .OfClass(typeof(Level)).Cast<Level>())
+            {
+                var d = Math.Abs(lvl.Elevation - zFeet);
+                if (d < bestDelta) { bestDelta = d; bestId = SafeIdValue(lvl.Id); }
+            }
+            return bestId;
         }
 
         // ---- helpers ----

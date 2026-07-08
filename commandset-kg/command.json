@@ -62,6 +62,11 @@
       "commandName": "kg_resolve_drift",
       "description": "Align the KG v2 projection to the live Revit document on a per-entry basis. missing_in_kg → project the Revit element; attrs_diverged → overwrite KG attrs; orphan_kg_node → soft-delete the KG node (history kept); tombstoned_but_live → resurrect + re-sync. action_log appended, F2 annotations and bootstrap nodes preserved. Optional kinds[], node_type, dry_run filters. Non-dry-run requires confirm=\"align-to-revit\".",
       "assemblyPath": "RevitMCPKgCommandSet.dll"
+    },
+    {
+      "commandName": "kg_compute_adjacency",
+      "description": "Compute room-to-room adjacency from the live model and project it as Derived adjacent_to edges (Room ↔ Room), projecting room-separation lines (RoomSeparationLine nodes + bounded_by) on the way. Deterministic (no LLM), idempotent (full replace of adjacent_to each run), Revit-side read-only (GetBoundarySegments + GetRoomAtPoint). Each edge carries boundary_type (wall|separation|mixed), via (mediator node llm_ids) and computed_at_turn. Returns { rooms, pairs, separation_lines, computed_at_turn }.",
+      "assemblyPath": "RevitMCPKgCommandSet.dll"
     }
   ]
 }
