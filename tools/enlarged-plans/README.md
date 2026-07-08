@@ -72,6 +72,10 @@ Toujours lancer un **`dry-run`** d'abord pour vérifier les échelles.
   construction). À réajuster par projet (2 DWG masqués project-specific). Aucune
   vue prototype requise. NB : quelques sous-catégories analytiques restent sous un
   parent masqué (nul impact visuel), non listées.
+- **DWG importés** : la vue de référence les masque **par élément** (invisible au
+  diff catégorie). Le pipeline masque donc **toutes** les catégories DWG/DXF/DGN
+  via `hideImportedCad: true` — rendu propre, from-scratch, sans lister les
+  imports project-specific.
 - Marge par défaut 0,5 m ; l'auto-tune la réduit jusqu'à 0,2 m si besoin (ex. 406
   → 0,27 pour tenir en 1:35 ; 411 → 0,2 pour 1:25). Override manuel possible via
   `marginByNumber`.
