@@ -55,6 +55,7 @@ var localBy = (Newtonsoft.Json.Linq.JObject)S["localByNumber"] ?? new Newtonsoft
 var marginBy= (Newtonsoft.Json.Linq.JObject)S["marginByNumber"] ?? new Newtonsoft.Json.Linq.JObject();
 var levelBy = (Newtonsoft.Json.Linq.JObject)S["levelByNumber"] ?? new Newtonsoft.Json.Linq.JObject();
 bool cropFollowsRoom = S["cropFollowsRoom"] != null ? (bool)S["cropFollowsRoom"] : false;
+bool hideForeignElevMarks = S["hideForeignElevationMarks"] != null ? (bool)S["hideForeignElevationMarks"] : false;
 var viewCfg = (Newtonsoft.Json.Linq.JObject)S["viewConfig"] ?? new Newtonsoft.Json.Linq.JObject();
 
 ViewDetailLevel detail = detailStr == "Fine" ? ViewDetailLevel.Fine
@@ -352,6 +353,24 @@ foreach (var room in rooms)
         vplan.CropBoxActive = true; vplan.CropBoxVisible = true;
         var ac = vplan.get_Parameter(BuiltInParameter.VIEWER_ANNOTATION_CROP_ACTIVE);
         if (ac != null && !ac.IsReadOnly) ac.Set(1);
+
+        // masquer les marqueurs d'élévation des pièces voisines qui tombent dans
+        // le crop élargi ; la réf ne garde que ceux situés DANS la pièce.
+        if (hideForeignElevMarks)
+        {
+            var elToHide = new System.Collections.Generic.List<ElementId>();
+            double zr = lvl.Elevation + 2.0;
+            foreach (var em in new FilteredElementCollector(doc).OfClass(typeof(ElevationMarker)))
+            {
+                var bx = em.get_BoundingBox(vplan); if (bx == null) bx = em.get_BoundingBox(null);
+                if (bx == null) continue;
+                var cc = (bx.Min + bx.Max) * 0.5;
+                if (cc.X < cb.Min.X || cc.X > cb.Max.X || cc.Y < cb.Min.Y || cc.Y > cb.Max.Y) continue;
+                bool inR = false; try { inR = room.IsPointInRoom(new XYZ(cc.X, cc.Y, zr)); } catch { }
+                if (!inR && em.CanBeHidden(vplan)) elToHide.Add(em.Id);
+            }
+            if (elToHide.Count > 0) try { vplan.HideElements(elToHide); } catch { }
+        }
 
         double px = cX / MM, py = cY / MM;
         if (Viewport.CanAddViewToSheet(doc, sheet.Id, vplan.Id))

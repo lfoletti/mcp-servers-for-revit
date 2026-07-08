@@ -18,6 +18,7 @@
 
   "detailLevel": "Fine",
   "cropFollowsRoom": true,
+  "hideForeignElevationMarks": true,
   "onExisting": "skip",
   "duplicateSuffix": "-D",
 
