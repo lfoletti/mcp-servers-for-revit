@@ -378,3 +378,6 @@ FodyWeavers.xsd
 # KG benchmark runtime state (per-run, machine-specific)
 .kg-bench/
 .kg-bench-many/
+
+# Exported KG graphs (per-project data, not source)
+graphs/
