@@ -35,9 +35,15 @@ namespace RevitMCPKgCommandSet.Core
             ["WallType"] = new NodeTypeSpec(
                 new[] { "name", "total_thickness" },
                 new[] { "layers_summary" }),
+            // Revit Material referenced by a type's compound-structure layers,
+            // reached via has_material edges. Only materials actually used by a
+            // projected type are projected (not the full document palette).
+            ["Material"] = new NodeTypeSpec(
+                new[] { "name" },
+                new[] { "material_class", "color" }),
             ["Floor"] = new NodeTypeSpec(
-                new[] { "type_ref", "level_ref", "boundary", "area_m2" },
-                new[] { "holes" }),
+                new[] { "type_ref", "level_ref", "area_m2" },
+                new[] { "boundary", "holes" }),
             ["FloorType"] = new NodeTypeSpec(
                 new[] { "name", "total_thickness" },
                 new[] { "layers_summary" }),

@@ -13,6 +13,9 @@ namespace RevitMCPKgCommandSet.Core
         public const string BoundedBy = "bounded_by";
         public const string ConnectsAt = "connects_at";
         public const string DerivedFrom = "derived_from";
+        // A WallType (or, later, FamilyType) references the Materials of its
+        // compound-structure layers. Owned by the model like every F1 edge.
+        public const string HasMaterial = "has_material";
 
         // F2 — semantic annotations authored via kg_annotate (DESIGN §2.2,
         // L-10). Owned by the KG: untouched by Revit's DocumentChanged and
@@ -29,7 +32,7 @@ namespace RevitMCPKgCommandSet.Core
 
         public static readonly HashSet<string> F1 = new HashSet<string>
         {
-            AtLevel, IsType, Hosts, BoundedBy, ConnectsAt, DerivedFrom,
+            AtLevel, IsType, Hosts, BoundedBy, ConnectsAt, DerivedFrom, HasMaterial,
         };
 
         public static readonly HashSet<string> F2 = new HashSet<string>
@@ -39,7 +42,7 @@ namespace RevitMCPKgCommandSet.Core
 
         public static readonly HashSet<string> All = new HashSet<string>
         {
-            AtLevel, IsType, Hosts, BoundedBy, ConnectsAt, DerivedFrom,
+            AtLevel, IsType, Hosts, BoundedBy, ConnectsAt, DerivedFrom, HasMaterial,
             ReplacedBy, Tagged, ViolatesRule, ImplementsIntent, Contains,
         };
     }

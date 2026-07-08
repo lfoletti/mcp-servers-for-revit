@@ -6,6 +6,13 @@
       "env": {
         "KG_V2_TOOLS": "on"
       }
+    },
+    "rhino": {
+      "command": "uvx",
+      "args": ["rhinomcp"],
+      "env": {
+        "RHINO_MCP_HOST": "127.0.0.1"
+      }
     }
   }
 }
